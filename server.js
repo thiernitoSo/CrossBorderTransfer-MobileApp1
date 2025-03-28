@@ -17,7 +17,7 @@ const openaiService = require('./services/openaiService');
 
 // Create Express application
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 5000; // Use port 5000 which is standard for Replit
 
 // In-memory storage
 class MemStorage {
@@ -1049,4 +1049,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://0.0.0.0:${PORT}`);
+  console.log(`Access the application at: https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
 });
