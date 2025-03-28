@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Money - SendAfrika</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Send Money specific styles */
+        .send-money-container {
+            padding: 40px 0;
+        }
+        
+        .page-header {
+            margin-bottom: 30px;
+        }
+        
+        .page-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .breadcrumbs {
+            display: flex;
+            align-items: center;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+        
+        .breadcrumbs a {
+            color: var(--text-light);
+        }
+        
+        .breadcrumbs a:hover {
+            color: var(--primary-color);
+        }
+        
+        .breadcrumbs i {
+            margin: 0 10px;
+            font-size: 12px;
+        }
+        
+        .send-money-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 992px) {
+            .send-money-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .form-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 30px;
+        }
+        
+        .form-card h2 {
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: var(--text-color);
+        }
+        
+        .form-steps {
+            display: flex;
+            margin-bottom: 30px;
+        }
+        
+        .form-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+        
+        .form-step::after {
+            content: '';
+            position: absolute;
+            top: 25px;
+            right: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--border-color);
+            z-index: 1;
+        }
+        
+        .form-step:last-child::after {
+            display: none;
+        }
+        
+        .step-number {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--background-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: 600;
+            color: var(--text-light);
+            border: 2px solid var(--border-color);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .form-step.active .step-number {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .form-step.completed .step-number {
+            background-color: var(--success-color);
+            color: white;
+            border-color: var(--success-color);
+        }
+        
+        .step-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-light);
+        }
+        
+        .form-step.active .step-title {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .form-step.completed .step-title {
+            color: var(--success-color);
+        }
+        
+        .form-section {
+            display: none;
+        }
+        
+        .form-section.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .form-group select, .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        
+        .beneficiary-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .beneficiary-card {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .beneficiary-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 1px var(--primary-color);
+        }
+        
+        .beneficiary-card.selected {
+            border-color: var(--primary-color);
+            background-color: rgba(0, 82, 204, 0.05);
+            box-shadow: 0 0 0 1px var(--primary-color);
+        }
+        
+        .beneficiary-avatar {
+            width: 60px;
+            height: 60px;
+            background-color: var(--primary-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .beneficiary-name {
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .beneficiary-details {
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-light);
+        }
+        
+        .summary-card {
+            background-color: var(--background-light);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            position: sticky;
+            top: 100px;
+        }
+        
+        .summary-card h2 {
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .summary-item:last-of-type {
+            border-bottom: none;
+            margin-bottom: 25px;
+        }
+        
+        .summary-label {
+            color: var(--text-light);
+        }
+        
+        .summary-value {
+            font-weight: 600;
+        }
+        
+        .total-row {
+            background-color: rgba(0, 82, 204, 0.05);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .total-label {
+            font-weight: 600;
+        }
+        
+        .total-value {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .exchange-rate-info {
+            font-size: 14px;
+            color: var(--text-light);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header id="main-header">
+        <div class="container">
+            <div class="logo">
+                <h1>SendAfrika</h1>
+            </div>
+            <nav>
+                <ul id="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="index.html#how-it-works">How It Works</a></li>
+                    <li><a href="index.html#countries">Countries</a></li>
+                    <li><a href="index.html#fees">Fees</a></li>
+                </ul>
+            </nav>
+            <div class="auth-buttons">
+                <button id="logout-button" class="btn-secondary">Log Out</button>
+            </div>
+        </div>
+    </header>
+
+    <section class="send-money-container">
+        <div class="container">
+            <div class="page-header">
+                <h1>Send Money</h1>
+                <div class="breadcrumbs">
+                    <a href="dashboard.html">Dashboard</a>
+                    <i class="fas fa-chevron-right"></i>
+                    <span>Send Money</span>
+                </div>
+            </div>
+            
+            <div class="send-money-grid">
+                <div class="form-card">
+                    <div class="form-steps">
+                        <div class="form-step active" id="step-1">
+                            <div class="step-number">1</div>
+                            <div class="step-title">Recipient</div>
+                        </div>
+                        <div class="form-step" id="step-2">
+                            <div class="step-number">2</div>
+                            <div class="step-title">Amount</div>
+                        </div>
+                        <div class="form-step" id="step-3">
+                            <div class="step-number">3</div>
+                            <div class="step-title">Payment</div>
+                        </div>
+                        <div class="form-step" id="step-4">
+                            <div class="step-number">4</div>
+                            <div class="step-title">Confirm</div>
+                        </div>
+                    </div>
+                    
+                    <form id="send-money-form">
+                        <!-- Step 1: Select Beneficiary -->
+                        <div class="form-section active" id="section-1">
+                            <h2>Select Recipient</h2>
+                            <div class="beneficiary-list" id="beneficiary-list">
+                                <!-- Beneficiaries will be loaded here -->
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" id="add-new-beneficiary-btn">Add New Recipient</button>
+                                <button type="button" class="btn-primary" id="next-btn-1" disabled>Next</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2: Amount -->
+                        <div class="form-section" id="section-2">
+                            <h2>Enter Amount</h2>
+                            <div class="form-group">
+                                <label for="source-amount">Amount to Send (CAD)</label>
+                                <input type="number" id="source-amount" min="10" max="10000" step="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="destination-currency">Recipient Currency</label>
+                                <select id="destination-currency" required>
+                                    <!-- Options will be populated based on recipient's country -->
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" id="back-btn-2">Back</button>
+                                <button type="button" class="btn-primary" id="next-btn-2">Next</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3: Payment Method -->
+                        <div class="form-section" id="section-3">
+                            <h2>Payment Method</h2>
+                            <div class="form-group">
+                                <label for="payment-method">How would you like to pay?</label>
+                                <select id="payment-method" required>
+                                    <option value="debit_card">Debit Card</option>
+                                    <option value="credit_card">Credit Card</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="transfer-note">Note (Optional)</label>
+                                <input type="text" id="transfer-note" placeholder="Add a message for the recipient">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" id="back-btn-3">Back</button>
+                                <button type="button" class="btn-primary" id="next-btn-3">Next</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 4: Confirm -->
+                        <div class="form-section" id="section-4">
+                            <h2>Confirm Your Transfer</h2>
+                            <div class="form-group">
+                                <p>Please review your transfer details below. Once confirmed, you will be redirected to complete the payment.</p>
+                                
+                                <div style="background-color: var(--background-light); padding: 20px; border-radius: var(--border-radius); margin: 20px 0;">
+                                    <div id="confirmation-details">
+                                        <!-- Details will be populated via JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" id="back-btn-4">Back</button>
+                                <button type="submit" class="btn-primary" id="confirm-btn">Confirm & Pay</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="summary-card">
+                    <h2>Transaction Summary</h2>
+                    <div class="summary-item">
+                        <span class="summary-label">You Send</span>
+                        <span class="summary-value" id="summary-send-amount">CAD 0.00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Recipient Gets</span>
+                        <span class="summary-value" id="summary-receive-amount">NGN 0.00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Transfer Fee</span>
+                        <span class="summary-value" id="summary-fee">CAD 0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span class="total-label">Total To Pay</span>
+                        <span class="total-value" id="summary-total">CAD 0.00</span>
+                    </div>
+                    <p class="exchange-rate-info" id="exchange-rate-info">1 CAD = 0.00 NGN</p>
+                    
+                    <div id="recipient-info" style="background-color: white; padding: 15px; border-radius: var(--border-radius);">
+                        <h3 style="font-size: 16px; margin-bottom: 10px;">Recipient</h3>
+                        <div id="summary-recipient">Select a recipient to see details</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-about">
+                    <h3>SendAfrika</h3>
+                    <p>Providing fast, secure, and affordable money transfers from Canada to Africa since 2023.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="index.html#how-it-works">How It Works</a></li>
+                        <li><a href="index.html#countries">Countries</a></li>
+                        <li><a href="index.html#fees">Fees</a></li>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Cookie Policy</a></li>
+                        <li><a href="#">Anti-Fraud Policy</a></li>
+                        <li><a href="#">Complaints</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact Us</h4>
+                    <ul>
+                        <li><i class="fas fa-map-marker-alt"></i> 123 Finance Street, Toronto, ON</li>
+                        <li><i class="fas fa-phone"></i> +1 (416) 555-1234</li>
+                        <li><i class="fas fa-envelope"></i> support@sendafrika.com</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 SendAfrika. All rights reserved. | FINTRAC Reg. #: M23456789</p>
+                <div class="payment-methods">
+                    <i class="fab fa-cc-visa"></i>
+                    <i class="fab fa-cc-mastercard"></i>
+                    <i class="fab fa-cc-amex"></i>
+                    <i class="fab fa-cc-discover"></i>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Transfer data object to store form data across steps
+        const transferData = {
+            beneficiary: null,
+            amount: 0,
+            sourceCurrency: 'CAD',
+            destinationCurrency: '',
+            paymentMethod: '',
+            note: '',
+            exchangeRate: 0,
+            fee: 0,
+            totalAmount: 0,
+            destinationAmount: 0
+        };
+        
+        // Exchange rates
+        const exchangeRates = {
+            'NGN': 432.50,
+            'KES': 115.75,
+            'GHS': 12.50,
+            'UGX': 3725.80,
+            'TZS': 2350.45,
+            'XOF': 650.30,
+            'XAF': 650.30,
+            'ZAR': 15.80
+        };
+        
+        // Currency codes by country
+        const countryCurrencies = {
+            'NG': 'NGN',
+            'KE': 'KES',
+            'GH': 'GHS',
+            'UG': 'UGX',
+            'TZ': 'TZS',
+            'SN': 'XOF',
+            'CI': 'XOF',
+            'CM': 'XAF',
+            'ZA': 'ZAR'
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in
+            fetch('/api/user')
+                .then(response => {
+                    if (!response.ok) {
+                        // Not authenticated, redirect to login page
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    return response.json();
+                })
+                .then(user => {
+                    if (user) {
+                        // Load beneficiaries
+                        loadBeneficiaries();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking authentication status:', error);
+                    window.location.href = 'index.html';
+                });
+            
+            // Logout functionality
+            document.getElementById('logout-button').addEventListener('click', function() {
+                fetch('/api/logout', { method: 'POST' })
+                    .then(() => { window.location.href = 'index.html'; })
+                    .catch(error => { console.error('Error logging out:', error); });
+            });
+            
+            // Step navigation
+            document.getElementById('next-btn-1').addEventListener('click', () => navigateToStep(2));
+            document.getElementById('back-btn-2').addEventListener('click', () => navigateToStep(1));
+            document.getElementById('next-btn-2').addEventListener('click', validateAmountAndContinue);
+            document.getElementById('back-btn-3').addEventListener('click', () => navigateToStep(2));
+            document.getElementById('next-btn-3').addEventListener('click', validatePaymentAndContinue);
+            document.getElementById('back-btn-4').addEventListener('click', () => navigateToStep(3));
+            
+            // Add new beneficiary button
+            document.getElementById('add-new-beneficiary-btn').addEventListener('click', function() {
+                window.location.href = 'beneficiaries.html?add=true';
+            });
+            
+            // Amount input changes
+            document.getElementById('source-amount').addEventListener('input', updateSummary);
+            document.getElementById('destination-currency').addEventListener('change', updateSummary);
+            
+            // Form submission
+            document.getElementById('send-money-form').addEventListener('submit', submitTransfer);
+        });
+        
+        function loadBeneficiaries() {
+            fetch('/api/beneficiaries')
+                .then(response => response.json())
+                .then(beneficiaries => {
+                    const beneficiaryList = document.getElementById('beneficiary-list');
+                    beneficiaryList.innerHTML = '';
+                    
+                    if (beneficiaries && beneficiaries.length > 0) {
+                        beneficiaries.forEach(beneficiary => {
+                            const card = document.createElement('div');
+                            card.className = 'beneficiary-card';
+                            card.dataset.id = beneficiary.id;
+                            
+                            // Get initials for avatar
+                            const initials = (beneficiary.firstName.charAt(0) + beneficiary.lastName.charAt(0)).toUpperCase();
+                            
+                            card.innerHTML = `
+                                <div class="beneficiary-avatar">${initials}</div>
+                                <div class="beneficiary-name">${beneficiary.firstName} ${beneficiary.lastName}</div>
+                                <div class="beneficiary-details">${beneficiary.phoneNumber}</div>
+                                <div class="beneficiary-details">${beneficiary.country}</div>
+                            `;
+                            
+                            card.addEventListener('click', () => selectBeneficiary(beneficiary, card));
+                            beneficiaryList.appendChild(card);
+                        });
+                    } else {
+                        beneficiaryList.innerHTML = `
+                            <div style="grid-column: 1 / -1; text-align: center; padding: 30px;">
+                                <p>You don't have any recipients yet.</p>
+                                <button type="button" class="btn-primary" style="margin-top: 15px;" onclick="window.location.href='beneficiaries.html?add=true'">
+                                    Add Your First Recipient
+                                </button>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading beneficiaries:', error);
+                    document.getElementById('beneficiary-list').innerHTML = '<p>Error loading recipients. Please try again.</p>';
+                });
+        }
+        
+        function selectBeneficiary(beneficiary, card) {
+            // Remove selected class from all cards
+            document.querySelectorAll('.beneficiary-card').forEach(c => c.classList.remove('selected'));
+            
+            // Add selected class to clicked card
+            card.classList.add('selected');
+            
+            // Store selected beneficiary
+            transferData.beneficiary = beneficiary;
+            
+            // Update destination currency dropdown
+            const currencySelect = document.getElementById('destination-currency');
+            currencySelect.innerHTML = '';
+            
+            const currency = countryCurrencies[beneficiary.country] || 'NGN';
+            
+            const option = document.createElement('option');
+            option.value = currency;
+            option.textContent = currency;
+            currencySelect.appendChild(option);
+            
+            // Enable next button
+            document.getElementById('next-btn-1').disabled = false;
+            
+            // Update summary
+            updateRecipientSummary();
+        }
+        
+        function navigateToStep(step) {
+            // Hide all sections and deactivate all steps
+            document.querySelectorAll('.form-section').forEach(section => section.classList.remove('active'));
+            document.querySelectorAll('.form-step').forEach(stepEl => stepEl.classList.remove('active', 'completed'));
+            
+            // Show current section and activate current step
+            document.getElementById(`section-${step}`).classList.add('active');
+            document.getElementById(`step-${step}`).classList.add('active');
+            
+            // Mark previous steps as completed
+            for (let i = 1; i < step; i++) {
+                document.getElementById(`step-${i}`).classList.add('completed');
+            }
+            
+            // Additional actions based on step
+            if (step === 2) {
+                updateSummary();
+            } else if (step === 4) {
+                updateConfirmationDetails();
+            }
+        }
+        
+        function validateAmountAndContinue() {
+            const amountInput = document.getElementById('source-amount');
+            const amount = parseFloat(amountInput.value);
+            
+            if (isNaN(amount) || amount < 10) {
+                alert('Please enter a valid amount (minimum $10)');
+                amountInput.focus();
+                return;
+            }
+            
+            // Store amount and currency
+            transferData.amount = amount;
+            transferData.destinationCurrency = document.getElementById('destination-currency').value;
+            
+            // Calculate exchange rate, fee, and destination amount
+            calculateTransferDetails();
+            
+            // Navigate to next step
+            navigateToStep(3);
+        }
+        
+        function validatePaymentAndContinue() {
+            // Store payment method and note
+            transferData.paymentMethod = document.getElementById('payment-method').value;
+            transferData.note = document.getElementById('transfer-note').value;
+            
+            // Navigate to confirmation step
+            navigateToStep(4);
+        }
+        
+        function calculateTransferDetails() {
+            // Calculate fee
+            let fee = 0;
+            if (transferData.amount <= 100) {
+                fee = 5;
+            } else if (transferData.amount <= 500) {
+                fee = 10;
+            } else if (transferData.amount <= 1000) {
+                fee = 15;
+            } else {
+                fee = transferData.amount * 0.015; // 1.5% for amounts over 1000
+            }
+            
+            // Get exchange rate
+            const exchangeRate = exchangeRates[transferData.destinationCurrency] || 1;
+            
+            // Calculate destination amount
+            const destinationAmount = (transferData.amount - fee) * exchangeRate;
+            
+            // Store calculated values
+            transferData.fee = fee;
+            transferData.exchangeRate = exchangeRate;
+            transferData.destinationAmount = destinationAmount;
+            transferData.totalAmount = transferData.amount; // Total amount is just the source amount in this case
+            
+            // Update summary
+            updateSummary();
+        }
+        
+        function updateSummary() {
+            // If we're on the amount step, read values from form
+            if (document.getElementById('section-2').classList.contains('active')) {
+                const amount = parseFloat(document.getElementById('source-amount').value) || 0;
+                const destinationCurrency = document.getElementById('destination-currency').value;
+                
+                transferData.amount = amount;
+                transferData.destinationCurrency = destinationCurrency;
+                
+                // Recalculate transfer details
+                calculateTransferDetails();
+            }
+            
+            // Update summary display
+            document.getElementById('summary-send-amount').textContent = `CAD ${transferData.amount.toFixed(2)}`;
+            document.getElementById('summary-receive-amount').textContent = `${transferData.destinationCurrency} ${transferData.destinationAmount.toFixed(2)}`;
+            document.getElementById('summary-fee').textContent = `CAD ${transferData.fee.toFixed(2)}`;
+            document.getElementById('summary-total').textContent = `CAD ${transferData.totalAmount.toFixed(2)}`;
+            document.getElementById('exchange-rate-info').textContent = `1 CAD = ${transferData.exchangeRate.toFixed(2)} ${transferData.destinationCurrency}`;
+        }
+        
+        function updateRecipientSummary() {
+            const recipientDiv = document.getElementById('summary-recipient');
+            
+            if (transferData.beneficiary) {
+                const beneficiary = transferData.beneficiary;
+                recipientDiv.innerHTML = `
+                    <div style="margin-bottom: 5px;"><strong>${beneficiary.firstName} ${beneficiary.lastName}</strong></div>
+                    <div style="color: var(--text-light); font-size: 14px;">${beneficiary.phoneNumber}</div>
+                    <div style="color: var(--text-light); font-size: 14px;">${beneficiary.country}</div>
+                    <div style="color: var(--text-light); font-size: 14px; margin-top: 5px;">
+                        ${getPaymentMethodText(beneficiary)}
+                    </div>
+                `;
+            } else {
+                recipientDiv.textContent = 'Select a recipient to see details';
+            }
+        }
+        
+        function getPaymentMethodText(beneficiary) {
+            switch(beneficiary.paymentMethod) {
+                case 'bank':
+                    return `Bank transfer to ${beneficiary.bankName || 'bank account'}`;
+                case 'mobile_money':
+                    return `Mobile money to ${beneficiary.mobileMoneyProvider || 'mobile wallet'}`;
+                case 'cash_pickup':
+                    return 'Cash pickup';
+                default:
+                    return beneficiary.paymentMethod;
+            }
+        }
+        
+        function updateConfirmationDetails() {
+            const confirmationDiv = document.getElementById('confirmation-details');
+            const beneficiary = transferData.beneficiary;
+            
+            confirmationDiv.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <div style="margin-bottom: 10px;"><strong>Recipient</strong></div>
+                    <div>${beneficiary.firstName} ${beneficiary.lastName}</div>
+                    <div>${beneficiary.phoneNumber}</div>
+                    <div>${getPaymentMethodText(beneficiary)}</div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <div style="margin-bottom: 10px;"><strong>Amount</strong></div>
+                    <div>You send: CAD ${transferData.amount.toFixed(2)}</div>
+                    <div>Transfer fee: CAD ${transferData.fee.toFixed(2)}</div>
+                    <div>Recipient gets: ${transferData.destinationCurrency} ${transferData.destinationAmount.toFixed(2)}</div>
+                    <div>Exchange rate: 1 CAD = ${transferData.exchangeRate.toFixed(2)} ${transferData.destinationCurrency}</div>
+                </div>
+                
+                <div>
+                    <div style="margin-bottom: 10px;"><strong>Payment Method</strong></div>
+                    <div>${getPaymentMethodDisplayName(transferData.paymentMethod)}</div>
+                    ${transferData.note ? `<div style="margin-top: 10px;"><strong>Note:</strong> ${transferData.note}</div>` : ''}
+                </div>
+            `;
+        }
+        
+        function getPaymentMethodDisplayName(method) {
+            switch(method) {
+                case 'debit_card':
+                    return 'Debit Card';
+                case 'credit_card':
+                    return 'Credit Card';
+                case 'bank_transfer':
+                    return 'Bank Transfer';
+                default:
+                    return method;
+            }
+        }
+        
+        function submitTransfer(event) {
+            event.preventDefault();
+            
+            // Create transaction object
+            const transaction = {
+                amount: transferData.amount,
+                beneficiaryId: transferData.beneficiary.id,
+                destinationCurrency: transferData.destinationCurrency,
+                paymentMethod: transferData.paymentMethod,
+                note: transferData.note
+            };
+            
+            // Submit transaction to API
+            fetch('/api/transactions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(transaction)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to create transaction');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Redirect to transaction details or success page
+                alert('Transaction created successfully!');
+                window.location.href = 'transactions.html';
+            })
+            .catch(error => {
+                console.error('Error creating transaction:', error);
+                alert('Failed to create transaction. Please try again.');
+            });
+        }
+    </script>
+</body>
+</html>

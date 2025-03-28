@@ -1,30 +1,21 @@
 import { useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar as RNStatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { Stack } from 'expo-router';
 import { AuthProvider } from '../context/AuthContext';
 import { theme } from '../constants/theme';
-import * as SplashScreen from 'expo-splash-screen';
-
-// Keep the splash screen visible while we initialize resources
-SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useEffect(() => {
-    // Hide the splash screen after resources are loaded
-    const hideSplashScreen = async () => {
-      await SplashScreen.hideAsync();
-    };
-
-    hideSplashScreen();
+    // Initialization logic can go here
   }, []);
 
   return (
     <SafeAreaProvider>
       <PaperProvider theme={theme}>
         <AuthProvider>
-          <StatusBar style="auto" />
+          <RNStatusBar barStyle="dark-content" />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="auth" options={{ gestureEnabled: false }} />

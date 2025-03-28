@@ -287,6 +287,7 @@ const storage = new MemStorage();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+app.use(express.static('public')); // Serve static files from the 'public' directory
 
 // Session and authentication setup
 const scryptAsync = promisify(crypto.scrypt);
@@ -1035,6 +1036,17 @@ app.post('/api/analyze-transaction', async (req, res) => {
 });
 
 // Start the server
+// Catch-all route to serve the SPA for any non-API routes
+app.get('*', (req, res) => {
+  // Don't handle API routes here
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ message: 'API endpoint not found' });
+  }
+  
+  // Send the index.html file for all other routes
+  res.sendFile('index.html', { root: './public' });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://0.0.0.0:${PORT}`);
 });

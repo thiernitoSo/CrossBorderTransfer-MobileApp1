@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SendAfrika</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Dashboard specific styles */
+        .dashboard-container {
+            padding: 40px 0;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .user-welcome {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .dashboard-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 992px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .dashboard-sidebar {
+            background-color: var(--background-light);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        
+        .dashboard-menu {
+            list-style: none;
+        }
+        
+        .dashboard-menu-item {
+            margin-bottom: 10px;
+        }
+        
+        .dashboard-menu-item a {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-radius: var(--border-radius);
+            color: var(--text-color);
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        
+        .dashboard-menu-item a:hover, .dashboard-menu-item a.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .dashboard-menu-item i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .dashboard-main {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        
+        .stat-card-icon {
+            background-color: var(--primary-light);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            color: white;
+            font-size: 20px;
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+        
+        .recent-activity {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+        }
+        
+        .recent-activity h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .activity-list {
+            list-style: none;
+        }
+        
+        .activity-item {
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-icon {
+            background-color: var(--background-light);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-color);
+        }
+        
+        .activity-content {
+            flex: 1;
+        }
+        
+        .activity-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .activity-time {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+        
+        .activity-amount {
+            font-weight: 700;
+            color: var(--text-color);
+        }
+        
+        .view-all {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <header id="main-header">
+        <div class="container">
+            <div class="logo">
+                <h1>SendAfrika</h1>
+            </div>
+            <nav>
+                <ul id="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="index.html#how-it-works">How It Works</a></li>
+                    <li><a href="index.html#countries">Countries</a></li>
+                    <li><a href="index.html#fees">Fees</a></li>
+                </ul>
+            </nav>
+            <div class="auth-buttons">
+                <button id="logout-button" class="btn-secondary">Log Out</button>
+            </div>
+        </div>
+    </header>
+
+    <section class="dashboard-container">
+        <div class="container">
+            <div class="dashboard-header">
+                <h1 class="user-welcome">Hello, <span id="user-name">John</span>!</h1>
+                <div class="dashboard-actions">
+                    <button id="send-money-button" class="btn-primary"><i class="fas fa-paper-plane"></i> Send Money</button>
+                    <button id="add-beneficiary-button" class="btn-secondary"><i class="fas fa-user-plus"></i> Add Beneficiary</button>
+                </div>
+            </div>
+            
+            <div class="dashboard-grid">
+                <div class="dashboard-sidebar">
+                    <ul class="dashboard-menu">
+                        <li class="dashboard-menu-item">
+                            <a href="#" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                        </li>
+                        <li class="dashboard-menu-item">
+                            <a href="send-money.html"><i class="fas fa-paper-plane"></i> Send Money</a>
+                        </li>
+                        <li class="dashboard-menu-item">
+                            <a href="transactions.html"><i class="fas fa-history"></i> Transactions</a>
+                        </li>
+                        <li class="dashboard-menu-item">
+                            <a href="beneficiaries.html"><i class="fas fa-users"></i> Beneficiaries</a>
+                        </li>
+                        <li class="dashboard-menu-item">
+                            <a href="profile.html"><i class="fas fa-user-circle"></i> Profile</a>
+                        </li>
+                        <li class="dashboard-menu-item">
+                            <a href="support.html"><i class="fas fa-headset"></i> Support</a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="dashboard-main">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                            <h3>TOTAL SENT</h3>
+                            <div class="stat-value" id="total-sent">CAD 0.00</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-icon">
+                                <i class="fas fa-exchange-alt"></i>
+                            </div>
+                            <h3>TOTAL TRANSACTIONS</h3>
+                            <div class="stat-value" id="total-transactions">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <h3>BENEFICIARIES</h3>
+                            <div class="stat-value" id="total-beneficiaries">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <h3>PENDING</h3>
+                            <div class="stat-value" id="pending-transactions">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="recent-activity">
+                        <h2>Recent Transactions</h2>
+                        <ul class="activity-list" id="recent-transactions-list">
+                            <!-- Transactions will be populated by JavaScript -->
+                        </ul>
+                        <a href="transactions.html" class="view-all">View All Transactions</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-about">
+                    <h3>SendAfrika</h3>
+                    <p>Providing fast, secure, and affordable money transfers from Canada to Africa since 2023.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="index.html#how-it-works">How It Works</a></li>
+                        <li><a href="index.html#countries">Countries</a></li>
+                        <li><a href="index.html#fees">Fees</a></li>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Cookie Policy</a></li>
+                        <li><a href="#">Anti-Fraud Policy</a></li>
+                        <li><a href="#">Complaints</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact Us</h4>
+                    <ul>
+                        <li><i class="fas fa-map-marker-alt"></i> 123 Finance Street, Toronto, ON</li>
+                        <li><i class="fas fa-phone"></i> +1 (416) 555-1234</li>
+                        <li><i class="fas fa-envelope"></i> support@sendafrika.com</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 SendAfrika. All rights reserved. | FINTRAC Reg. #: M23456789</p>
+                <div class="payment-methods">
+                    <i class="fab fa-cc-visa"></i>
+                    <i class="fab fa-cc-mastercard"></i>
+                    <i class="fab fa-cc-amex"></i>
+                    <i class="fab fa-cc-discover"></i>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in
+            fetch('/api/user')
+                .then(response => {
+                    if (!response.ok) {
+                        // Not authenticated, redirect to login page
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    return response.json();
+                })
+                .then(user => {
+                    if (user) {
+                        // Update user name
+                        document.getElementById('user-name').textContent = user.firstName;
+                        
+                        // Fetch dashboard stats
+                        fetchDashboardStats();
+                        
+                        // Fetch recent transactions
+                        fetchRecentTransactions();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking authentication status:', error);
+                    window.location.href = 'index.html';
+                });
+            
+            // Logout functionality
+            document.getElementById('logout-button').addEventListener('click', function() {
+                fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    window.location.href = 'index.html';
+                })
+                .catch(error => {
+                    console.error('Error logging out:', error);
+                });
+            });
+            
+            // Send Money button
+            document.getElementById('send-money-button').addEventListener('click', function() {
+                window.location.href = 'send-money.html';
+            });
+            
+            // Add Beneficiary button
+            document.getElementById('add-beneficiary-button').addEventListener('click', function() {
+                window.location.href = 'beneficiaries.html';
+            });
+        });
+        
+        function fetchDashboardStats() {
+            // Fetch transaction stats
+            fetch('/api/transactions/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-sent').textContent = `CAD ${data.totalSentCAD.toFixed(2)}`;
+                    document.getElementById('total-transactions').textContent = data.totalTransactions;
+                    document.getElementById('pending-transactions').textContent = data.pendingTransactions;
+                })
+                .catch(error => {
+                    console.error('Error fetching transaction stats:', error);
+                });
+            
+            // Fetch beneficiaries count
+            fetch('/api/beneficiaries')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-beneficiaries').textContent = data.length;
+                })
+                .catch(error => {
+                    console.error('Error fetching beneficiaries:', error);
+                });
+        }
+        
+        function fetchRecentTransactions() {
+            fetch('/api/transactions?limit=5')
+                .then(response => response.json())
+                .then(data => {
+                    const transactionsList = document.getElementById('recent-transactions-list');
+                    transactionsList.innerHTML = '';
+                    
+                    if (data.transactions && data.transactions.length > 0) {
+                        data.transactions.forEach(transaction => {
+                            const li = document.createElement('li');
+                            li.className = 'activity-item';
+                            
+                            // Determine icon based on status
+                            let iconClass = 'fas fa-check-circle';
+                            let iconColor = 'var(--success-color)';
+                            
+                            if (transaction.status === 'pending') {
+                                iconClass = 'fas fa-clock';
+                                iconColor = 'var(--warning-color)';
+                            } else if (transaction.status === 'failed') {
+                                iconClass = 'fas fa-times-circle';
+                                iconColor = 'var(--error-color)';
+                            }
+                            
+                            // Format date
+                            const date = new Date(transaction.createdAt);
+                            const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                            
+                            li.innerHTML = `
+                                <div class="activity-icon" style="color: ${iconColor}">
+                                    <i class="${iconClass}"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">To: ${transaction.beneficiaryName}</div>
+                                    <div class="activity-time">${formattedDate} · ${transaction.status.toUpperCase()}</div>
+                                </div>
+                                <div class="activity-amount">
+                                    ${transaction.sourceCurrency} ${transaction.sourceAmount.toFixed(2)}
+                                </div>
+                            `;
+                            
+                            transactionsList.appendChild(li);
+                        });
+                    } else {
+                        transactionsList.innerHTML = '<p>No transactions yet. Send your first transfer!</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching recent transactions:', error);
+                });
+        }
+    </script>
+</body>
+</html>
