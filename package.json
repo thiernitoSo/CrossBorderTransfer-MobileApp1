@@ -30,6 +30,8 @@
     "react-native-paper": "^5.13.1",
     "react-native-safe-area-context": "^5.3.0",
     "uuid": "^11.1.0",
-    "yup": "^1.6.1"
+    "yup": "^1.6.1",
+    "react-dom": "18.3.1",
+    "react-native-web": "~0.19.13"
   }
 }
