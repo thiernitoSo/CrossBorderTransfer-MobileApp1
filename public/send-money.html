@@ -6,10 +6,35 @@
     <title>Send Money - SendAfrika</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* Send Money specific styles */
         .send-money-container {
             padding: 40px 0;
+        }
+        
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 12px;
+            background-color: var(--background-light);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .btn-small:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .active-chart-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .active-chart-btn:hover {
+            background-color: var(--primary-dark);
         }
         
         .page-header {
@@ -425,6 +450,18 @@
                     </div>
                     <p class="exchange-rate-info" id="exchange-rate-info">1 CAD = 0.00 NGN</p>
                     
+                    <!-- Currency Conversion Visualization -->
+                    <div id="currency-visualization-container" style="margin-bottom: 20px;">
+                        <h3 style="font-size: 16px; margin-bottom: 10px;">Currency Conversion</h3>
+                        <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+                            <button id="chart-type-bar" class="btn-small active-chart-btn" style="margin-right: 5px;">Bar Chart</button>
+                            <button id="chart-type-line" class="btn-small">Line Chart</button>
+                        </div>
+                        <div class="canvas-container" style="height: 200px;">
+                            <canvas id="currency-chart"></canvas>
+                        </div>
+                    </div>
+                    
                     <div id="recipient-info" style="background-color: white; padding: 15px; border-radius: var(--border-radius);">
                         <h3 style="font-size: 16px; margin-bottom: 10px;">Recipient</h3>
                         <div id="summary-recipient">Select a recipient to see details</div>
@@ -577,6 +614,19 @@
             
             // Form submission
             document.getElementById('send-money-form').addEventListener('submit', submitTransfer);
+            
+            // Chart type buttons
+            document.getElementById('chart-type-bar').addEventListener('click', function() {
+                document.getElementById('chart-type-bar').classList.add('active-chart-btn');
+                document.getElementById('chart-type-line').classList.remove('active-chart-btn');
+                setChartType('bar');
+            });
+            
+            document.getElementById('chart-type-line').addEventListener('click', function() {
+                document.getElementById('chart-type-line').classList.add('active-chart-btn');
+                document.getElementById('chart-type-bar').classList.remove('active-chart-btn');
+                setChartType('line');
+            });
         });
         
         function loadBeneficiaries() {
@@ -731,6 +781,9 @@
             updateSummary();
         }
         
+        // Variable to store chart instance
+        let currencyChart = null;
+        
         function updateSummary() {
             // If we're on the amount step, read values from form
             if (document.getElementById('section-2').classList.contains('active')) {
@@ -750,6 +803,24 @@
             document.getElementById('summary-fee').textContent = `CAD ${transferData.fee.toFixed(2)}`;
             document.getElementById('summary-total').textContent = `CAD ${transferData.totalAmount.toFixed(2)}`;
             document.getElementById('exchange-rate-info').textContent = `1 CAD = ${transferData.exchangeRate.toFixed(2)} ${transferData.destinationCurrency}`;
+            
+            // Update currency visualization chart
+            updateCurrencyChart();
+        }
+        
+        function calculateFeeForAmount(amount) {
+            // Calculate fee based on amount
+            let fee = 0;
+            if (amount <= 100) {
+                fee = 5;
+            } else if (amount <= 500) {
+                fee = 10;
+            } else if (amount <= 1000) {
+                fee = 15;
+            } else {
+                fee = amount * 0.015; // 1.5% for amounts over 1000
+            }
+            return fee;
         }
         
         function updateRecipientSummary() {
@@ -858,6 +929,112 @@
             .catch(error => {
                 console.error('Error creating transaction:', error);
                 alert('Failed to create transaction. Please try again.');
+            });
+        }
+        
+        // Change chart type between bar and line
+        function setChartType(type) {
+            if (!currencyChart) return;
+            
+            // Destroy existing chart
+            currencyChart.destroy();
+            currencyChart = null;
+            
+            // Update currency chart with new type
+            updateCurrencyChart(type);
+        }
+        
+        // Modify updateCurrencyChart to accept a type parameter
+        function updateCurrencyChart(type = 'bar') {
+            // Define data points for the chart (simulate different amounts)
+            const amounts = [10, 50, 100, 500, 1000, 2000];
+            const sourceData = [];
+            const destData = [];
+            
+            // Calculate conversion values for each amount
+            amounts.forEach(amount => {
+                sourceData.push(amount);
+                // Apply exchange rate to calculate destination amount
+                const fee = calculateFeeForAmount(amount);
+                const destinationAmount = (amount - fee) * transferData.exchangeRate;
+                destData.push(destinationAmount.toFixed(2));
+            });
+            
+            // Create or update the chart
+            if (currencyChart) {
+                // Update existing chart data
+                currencyChart.data.datasets[0].data = sourceData;
+                currencyChart.data.datasets[1].data = destData;
+                currencyChart.data.datasets[0].label = `CAD (Source)`;
+                currencyChart.data.datasets[1].label = `${transferData.destinationCurrency} (Destination)`;
+                currencyChart.update();
+            } else {
+                // Create new chart
+                createCurrencyChart(amounts, sourceData, destData, type);
+            }
+        }
+        
+        // Modify createCurrencyChart to accept a type parameter
+        function createCurrencyChart(labels, sourceData, destData, type = 'bar') {
+            const ctx = document.getElementById('currency-chart').getContext('2d');
+            
+            currencyChart = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels.map(val => `$${val}`),
+                    datasets: [
+                        {
+                            label: `CAD (Source)`,
+                            data: sourceData,
+                            backgroundColor: 'rgba(0, 82, 204, 0.5)',
+                            borderColor: 'rgba(0, 82, 204, 1)',
+                            borderWidth: 1,
+                            tension: 0.4 // Only applies to line charts for a smoother curve
+                        },
+                        {
+                            label: `${transferData.destinationCurrency} (Destination)`,
+                            data: destData,
+                            backgroundColor: 'rgba(0, 204, 150, 0.5)',
+                            borderColor: 'rgba(0, 204, 150, 1)',
+                            borderWidth: 1,
+                            tension: 0.4 // Only applies to line charts for a smoother curve
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Amount'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'CAD Amounts'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.raw;
+                                    return `${label}: ${value}`;
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Instant Currency Conversion Visualization'
+                        }
+                    }
+                }
             });
         }
     </script>
