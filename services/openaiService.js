@@ -306,6 +306,234 @@ Please include:
     // Return country-specific tips if available, otherwise just common tips
     return countryTips[countryCode] ? [...countryTips[countryCode], ...commonTips] : commonTips;
   }
+
+  /**
+   * Generate a response for the chat interface based on conversation history
+   * @param {Array} messages An array of message objects in OpenAI format {role, content}
+   * @returns {Promise<string>} AI-generated response 
+   */
+  async generateChatResponse(messages) {
+    try {
+      // Extract the user context if it exists in the messages
+      const userContext = messages.find(m => m.role === 'context')?.content || {};
+      
+      // Add system prompt if it doesn't exist
+      let messagesWithSystem = [...messages];
+      if (!messagesWithSystem.some(m => m.role === 'system')) {
+        messagesWithSystem.unshift({
+          role: "system",
+          content: `You are "Rafiki", a helpful AI assistant specializing in cross-border money transfers from Canada to Africa.
+          
+Your role is to provide accurate, trustworthy information about:
+- SendAfrika's money transfer services
+- Exchange rates and fees
+- Supported payment methods and delivery options
+- Security procedures and regulatory compliance
+- Supported countries and currencies
+- Transaction processing times
+
+Guidelines:
+- Be conversational but professional
+- Provide clear, concise answers
+- Never make up information about transfer rates or services
+- Avoid discussing politics or sensitive national issues
+- Focus on the specific user query
+- If you're unsure of an answer, suggest contacting customer support
+- Respect user privacy - don't ask for personal or account information`
+        });
+      }
+      
+      // Only include messages with standard roles
+      const filteredMessages = messagesWithSystem.filter(m => 
+        ['system', 'user', 'assistant'].includes(m.role)
+      );
+      
+      // Call OpenAI API with the conversation history
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: filteredMessages,
+        max_tokens: 500
+      });
+
+      return response.choices[0].message.content;
+    } catch (error) {
+      console.error('Chat response generation error:', error);
+      throw error; // Let the caller handle the fallback
+    }
+  }
+
+  /**
+   * Analyze a transaction for fraud detection and risk assessment
+   * @param {Object} transaction Transaction details to analyze
+   * @param {Object} user User information for context
+   * @param {Array} userTransactionHistory Previous transactions (optional)
+   * @returns {Promise<Object>} Risk assessment results
+   */
+  async analyzeTransactionRisk(transaction, user, userTransactionHistory = []) {
+    try {
+      // Create a comprehensive prompt with all relevant data
+      const prompt = `Analyze this cross-border money transfer for potential fraud or compliance risks:
+      
+Transaction details:
+- Amount: ${transaction.sourceAmount} ${transaction.sourceCurrency} to ${transaction.destinationAmount} ${transaction.destinationCurrency}
+- Exchange rate: ${transaction.exchangeRate}
+- Fee: ${transaction.fee} ${transaction.sourceCurrency}
+- Recipient country: ${transaction.recipientCountry || 'Unknown'}
+- Transfer method: ${transaction.paymentMethod || 'Unknown'}
+- Recipient: ${transaction.beneficiaryName || 'Unknown'}
+- Relationship to sender: ${transaction.relationship || 'Unknown'}
+- Purpose of transfer: ${transaction.purpose || 'Not specified'}
+
+Sender information:
+- Account age: ${user.accountAge || 'Unknown'} days
+- Location: ${user.location || 'Canada'}
+- Verification status: ${user.verificationStatus || 'Unknown'}
+
+Transaction history (last ${userTransactionHistory.length} transactions):
+${userTransactionHistory.map(t => 
+  `- ${t.createdAt}: ${t.sourceAmount} ${t.sourceCurrency} to ${t.recipientCountry || 'Unknown'}`
+).join('\n')}
+
+Based on this information, assess the transaction risk using the following factors:
+1. Transaction amount compared to user's typical behavior
+2. Destination country risk factors
+3. Payment method security
+4. Pattern of recent transactions
+5. Unusual timing or circumstances
+6. Compliance with AML and CTF regulations
+
+Provide a risk assessment with a risk level, confidence score, specific flags or concerns, and recommendations.`;
+
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          { 
+            role: "system", 
+            content: "You are an AI financial compliance expert specializing in fraud detection for cross-border money transfers. Analyze transactions for risk factors and regulatory concerns. Provide concise, actionable risk assessments with clear recommendations. Format your response as JSON with specific fields." 
+          },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      // Parse the JSON response
+      const riskAssessment = JSON.parse(response.choices[0].message.content);
+      
+      // Ensure we have all expected fields
+      return {
+        riskLevel: riskAssessment.riskLevel || 'unknown',
+        confidence: riskAssessment.confidence || 0.5,
+        flags: riskAssessment.flags || [],
+        concerns: riskAssessment.concerns || [],
+        recommendations: riskAssessment.recommendations || [],
+        requiresReview: riskAssessment.requiresReview || false,
+        complianceStatus: riskAssessment.complianceStatus || 'unknown'
+      };
+    } catch (error) {
+      console.error('Transaction risk analysis error:', error);
+      
+      // Provide a fallback response that encourages appropriate caution
+      return {
+        riskLevel: 'unknown',
+        confidence: 0.5,
+        flags: [],
+        concerns: ["Unable to perform automated risk assessment at this time."],
+        recommendations: [
+          "Verify recipient information carefully",
+          "Confirm the purpose of the transfer",
+          "Consider your typical transaction patterns"
+        ],
+        requiresReview: transaction.sourceAmount > 1000, // Flag larger transfers for review
+        complianceStatus: 'pending_review'
+      };
+    }
+  }
+
+  /**
+   * Generate personalized financial advice based on transaction history
+   * @param {Object} user User information
+   * @param {Array} transactionHistory User's transaction history
+   * @returns {Promise<Object>} Personalized financial insights
+   */
+  async getPersonalizedFinancialInsights(user, transactionHistory = []) {
+    try {
+      // Skip if there are no transactions to analyze
+      if (!transactionHistory.length) {
+        return {
+          insights: [
+            {
+              title: "Start Your Transfer Journey",
+              description: "Complete your first money transfer to receive personalized financial insights."
+            }
+          ],
+          recommendations: []
+        };
+      }
+
+      // Prepare transaction data for analysis
+      const formattedTransactions = transactionHistory.map(t => ({
+        date: t.createdAt,
+        amount: t.sourceAmount,
+        currency: t.sourceCurrency,
+        destinationCurrency: t.destinationCurrency,
+        country: t.recipientCountry,
+        fee: t.fee
+      }));
+
+      const prompt = `Analyze this user's money transfer history and provide personalized financial insights:
+      
+User information:
+- Name: ${user.firstName || 'User'} ${user.lastName || ''}
+- Country: ${user.country || 'Canada'}
+- Account since: ${user.createdAt || 'Recently'}
+
+Transaction history (last ${formattedTransactions.length} transactions):
+${JSON.stringify(formattedTransactions, null, 2)}
+
+Based on this transaction history, provide:
+1. Key patterns in the user's transfer behavior
+2. Opportunities to save on fees or get better rates
+3. Personalized recommendations for future transfers
+4. Potential optimizations for timing or transfer methods
+5. Relevant financial insights based on destination countries`;
+
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          { 
+            role: "system", 
+            content: "You are an AI financial advisor specializing in cross-border money transfers. Analyze transaction history to provide personalized, actionable financial insights. Format your response as JSON with 'insights' (array of objects with title and description) and 'recommendations' (array of strings)." 
+          },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      // Parse the JSON response
+      return JSON.parse(response.choices[0].message.content);
+    } catch (error) {
+      console.error('Financial insights error:', error);
+      
+      // Provide a useful fallback with generic insights
+      return {
+        insights: [
+          {
+            title: "Regular Transfers Save on Fees",
+            description: "Setting up scheduled transfers can help you save on fees and get better exchange rates over time."
+          },
+          {
+            title: "Compare Payment Methods",
+            description: "Different payment methods may offer varying fees and delivery times. Explore all options for your destination country."
+          }
+        ],
+        recommendations: [
+          "Consider bundling smaller transfers into larger ones to reduce overall fees",
+          "Check for promotional rates and special offers before making your next transfer",
+          "Verify recipient information carefully to avoid transfer delays"
+        ]
+      };
+    }
+  }
 }
 
 module.exports = new OpenAIService();

@@ -2,43 +2,65 @@ import { Express, Request, Response } from 'express';
 import { createServer, Server } from 'http';
 import { setupAuth } from './auth';
 import { storage } from './storage';
-import OpenAI from 'openai';
 import { paymentService, QuoteData, PaymentRequest } from '../services/payment';
 import { rafikiService } from '../services/rafiki';
 import { orangeMoneyService } from '../services/orangeMoney';
+import openaiService from '../services/openaiService';
 
 export function registerRoutes(app: Express): Server {
   // Sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
 
-  // OpenAI integration for chatbot
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-  // Initialize the OpenAI API with our API key
+  // Customer support chat API
   app.post('/api/chat', async (req: Request, res: Response) => {
     try {
-      const { messages } = req.body;
+      // Handle both formats for backward compatibility
+      if (req.body.messages && Array.isArray(req.body.messages)) {
+        // Old format with array of messages
+        const { messages } = req.body;
+        
+        // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 500,
+        });
 
-      if (!messages || !Array.isArray(messages)) {
-        return res.status(400).json({ error: 'Invalid request format. Expected an array of messages.' });
+        return res.json({ response: response.choices[0].message });
+      } else {
+        // New format with single message and context
+        const { message, userContext } = req.body;
+
+        if (!message || typeof message !== 'string') {
+          return res.status(400).json({ message: 'Invalid request format. Expected a message string.' });
+        }
+
+        // Get user information if authenticated
+        let context = userContext || {};
+        if (req.isAuthenticated()) {
+          const user = req.user as any;
+          context = {
+            ...context,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            country: 'Canada'
+          };
+        }
+
+        // Use our OpenAI service to generate a response
+        const response = await openaiService.getCustomerSupportResponse(message, context);
+        res.json({ response });
       }
-
-      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 500,
-      });
-
-      res.json({ response: response.choices[0].message });
     } catch (error) {
-      console.error('OpenAI API error:', error);
+      console.error('Chat API error:', error);
       res.status(500).json({ error: 'Error processing chat request' });
     }
   });
 
-  // Transaction anomaly detection
+  // Transaction analysis API
   app.post('/api/analyze-transaction', async (req: Request, res: Response) => {
     try {
       const { transaction } = req.body;
@@ -47,27 +69,93 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: 'Invalid request. Transaction data required.' });
       }
 
-      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a transaction analysis AI for a cross-border money transfer service. Analyze the transaction data and provide a risk assessment with the following structure: risk level (low, medium, high), risk score (0-100), explanation, and recommendation.'
-          },
-          {
-            role: 'user',
-            content: `Analyze this transaction: ${JSON.stringify(transaction)}`
-          }
-        ],
-        response_format: { type: 'json_object' },
-      });
-
-      const analysis = JSON.parse(response.choices[0].message.content);
+      // Use our OpenAI service to analyze the transaction
+      const analysis = await openaiService.analyzeTransaction(transaction);
       res.json(analysis);
     } catch (error) {
       console.error('Transaction analysis error:', error);
       res.status(500).json({ error: 'Error analyzing transaction' });
+    }
+  });
+  
+  // Transaction risk assessment API
+  app.post('/api/analyze-transaction-risk', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { transaction } = req.body;
+      const userId = (req.user as any).id;
+
+      if (!transaction) {
+        return res.status(400).json({ error: 'Invalid request. Transaction data required.' });
+      }
+
+      // Get user data for analysis context
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Get transaction history for context
+      const transactionHistory = await storage.getTransactionsByUserId(userId, 1, 10);
+      
+      // Calculate account age in days
+      const accountCreationDate = new Date(user.createdAt);
+      const today = new Date();
+      const accountAgeInDays = Math.floor((today.getTime() - accountCreationDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Prepare user data for the AI analysis
+      const userContext = {
+        accountAge: accountAgeInDays,
+        location: 'Canada',
+        verificationStatus: user.isVerified ? 'verified' : 'unverified'
+      };
+
+      // Use our OpenAI service to analyze the transaction risk
+      const riskAnalysis = await openaiService.analyzeTransactionRisk(transaction, userContext, transactionHistory);
+      res.json(riskAnalysis);
+    } catch (error) {
+      console.error('Transaction risk analysis error:', error);
+      res.status(500).json({ error: 'Error analyzing transaction risk' });
+    }
+  });
+  
+  // Country transfer tips API
+  app.get('/api/country-transfer-tips/:countryCode', async (req: Request, res: Response) => {
+    try {
+      const countryCode = req.params.countryCode.toUpperCase();
+      
+      // Use our OpenAI service to get tips for the specified country
+      const tips = await openaiService.getCountryTransferTips(countryCode);
+      res.json(tips);
+    } catch (error) {
+      console.error('Country transfer tips error:', error);
+      res.status(500).json({ error: 'Error getting country transfer tips' });
+    }
+  });
+  
+  // Financial insights API
+  app.get('/api/financial-insights', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const userId = (req.user as any).id;
+      
+      // Get user data
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Get transaction history for analysis
+      const transactionHistory = await storage.getTransactionsByUserId(userId, 1, 20);
+      
+      // Use our OpenAI service to generate personalized financial insights
+      const insights = await openaiService.getPersonalizedFinancialInsights(user, transactionHistory);
+      res.json(insights);
+    } catch (error) {
+      console.error('Financial insights error:', error);
+      res.status(500).json({ error: 'Error generating financial insights' });
     }
   });
 
