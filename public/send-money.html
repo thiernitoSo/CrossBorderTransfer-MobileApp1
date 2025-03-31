@@ -567,6 +567,18 @@
         };
         
         document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOM fully loaded and parsed");
+            
+            // Set default destination currency for initial chart
+            transferData.destinationCurrency = 'NGN';
+            transferData.exchangeRate = exchangeRates['NGN'] || 1;
+            
+            // Initialize the chart with default values (bar type)
+            setTimeout(() => {
+                console.log("Initializing chart with default values");
+                updateCurrencyChart('bar');
+            }, 500);
+            
             // Check if user is logged in
             fetch('/api/user')
                 .then(response => {
@@ -962,48 +974,74 @@
         
         // Change chart type between bar and line
         function setChartType(type) {
-            if (!currencyChart) return;
+            console.log("Setting chart type to:", type);
             
+            if (!currencyChart) {
+                console.log("No existing chart found, creating new chart");
+                updateCurrencyChart(type);
+                return;
+            }
+            
+            console.log("Destroying existing chart");
             // Destroy existing chart
             currencyChart.destroy();
             currencyChart = null;
             
             // Update currency chart with new type
+            console.log("Creating new chart with type:", type);
             updateCurrencyChart(type);
         }
         
         // Modify updateCurrencyChart to accept a type parameter
         function updateCurrencyChart(type = 'bar') {
+            console.log("Updating currency chart with type:", type);
+            console.log("Current transferData:", transferData);
+            
             // Define data points for the chart (simulate different amounts)
             const amounts = [10, 50, 100, 500, 1000, 2000];
             const sourceData = [];
             const destData = [];
+            
+            // Ensure we have a valid exchange rate (default to 1 if not set)
+            const exchangeRate = transferData.exchangeRate || 1;
+            const destinationCurrency = transferData.destinationCurrency || 'NGN';
+            
+            console.log("Using exchange rate:", exchangeRate);
+            console.log("Using destination currency:", destinationCurrency);
             
             // Calculate conversion values for each amount
             amounts.forEach(amount => {
                 sourceData.push(amount);
                 // Apply exchange rate to calculate destination amount
                 const fee = calculateFeeForAmount(amount);
-                const destinationAmount = (amount - fee) * transferData.exchangeRate;
+                const destinationAmount = (amount - fee) * exchangeRate;
                 destData.push(destinationAmount.toFixed(2));
             });
             
+            console.log("Source data:", sourceData);
+            console.log("Destination data:", destData);
+            
             // Create or update the chart
             if (currencyChart) {
+                console.log("Updating existing chart");
                 // Update existing chart data
                 currencyChart.data.datasets[0].data = sourceData;
                 currencyChart.data.datasets[1].data = destData;
                 currencyChart.data.datasets[0].label = `CAD (Source)`;
-                currencyChart.data.datasets[1].label = `${transferData.destinationCurrency} (Destination)`;
+                currencyChart.data.datasets[1].label = `${destinationCurrency} (Destination)`;
+                currencyChart.config.type = type; // Update the chart type
                 currencyChart.update();
             } else {
+                console.log("Creating new chart");
                 // Create new chart
-                createCurrencyChart(amounts, sourceData, destData, type);
+                createCurrencyChart(amounts, sourceData, destData, type, destinationCurrency);
             }
         }
         
-        // Modify createCurrencyChart to accept a type parameter
-        function createCurrencyChart(labels, sourceData, destData, type = 'bar') {
+        // Modify createCurrencyChart to accept a type parameter and destinationCurrency
+        function createCurrencyChart(labels, sourceData, destData, type = 'bar', destinationCurrency = 'NGN') {
+            console.log("Creating chart with type:", type, "and currency:", destinationCurrency);
+            
             const ctx = document.getElementById('currency-chart').getContext('2d');
             
             currencyChart = new Chart(ctx, {
@@ -1020,7 +1058,7 @@
                             tension: 0.4 // Only applies to line charts for a smoother curve
                         },
                         {
-                            label: `${transferData.destinationCurrency} (Destination)`,
+                            label: `${destinationCurrency} (Destination)`,
                             data: destData,
                             backgroundColor: 'rgba(0, 204, 150, 0.5)',
                             borderColor: 'rgba(0, 204, 150, 1)',
