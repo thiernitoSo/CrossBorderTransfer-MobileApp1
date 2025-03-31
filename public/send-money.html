@@ -306,37 +306,43 @@
     </style>
 </head>
 <body>
-    <header id="main-header">
-        <div class="container">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
             <div class="logo">
-                <h1>SendAfrika</h1>
+                <img src="https://i.imgur.com/3yFJNt5.png" alt="SendAfrika Logo">
             </div>
-            <nav>
-                <ul id="nav-menu">
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="index.html#how-it-works">How It Works</a></li>
-                    <li><a href="index.html#countries">Countries</a></li>
-                    <li><a href="index.html#fees">Fees</a></li>
-                </ul>
-            </nav>
-            <div class="auth-buttons">
-                <button id="logout-button" class="btn-secondary">Log Out</button>
+            <ul class="nav-links">
+                <li><a href="dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li class="active"><a href="send-money.html"><i class="fas fa-paper-plane"></i> Send Money</a></li>
+                <li><a href="beneficiaries.html"><i class="fas fa-users"></i> Recipients</a></li>
+                <li><a href="transactions.html"><i class="fas fa-history"></i> Transactions</a></li>
+                <li><a href="support.html"><i class="fas fa-headset"></i> Support</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="#" id="logout-button"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
-        </div>
-    </header>
+        </nav>
 
-    <section class="send-money-container">
-        <div class="container">
-            <div class="page-header">
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
                 <h1>Send Money</h1>
+                <div class="user-profile">
+                    <div class="user-avatar" id="user-initial"></div>
+                    <div class="user-name" id="user-name">...</div>
+                </div>
+            </header>
+
+            <section class="content-section">
                 <div class="breadcrumbs">
                     <a href="dashboard.html">Dashboard</a>
                     <i class="fas fa-chevron-right"></i>
                     <span>Send Money</span>
                 </div>
-            </div>
-            
-            <div class="send-money-grid">
+                
+                <div class="send-money-grid">
                 <div class="form-card">
                     <div class="form-steps">
                         <div class="form-step active" id="step-1">
@@ -468,65 +474,11 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+            </section>
 
-    <footer>
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-about">
-                    <h3>SendAfrika</h3>
-                    <p>Providing fast, secure, and affordable money transfers from Canada to Africa since 2023.</p>
-                    <div class="social-links">
-                        <a href="#"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                    </div>
-                </div>
-                <div class="footer-links">
-                    <h4>Quick Links</h4>
-                    <ul>
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="index.html#how-it-works">How It Works</a></li>
-                        <li><a href="index.html#countries">Countries</a></li>
-                        <li><a href="index.html#fees">Fees</a></li>
-                        <li><a href="#">About Us</a></li>
-                        <li><a href="#">Contact</a></li>
-                    </ul>
-                </div>
-                <div class="footer-links">
-                    <h4>Legal</h4>
-                    <ul>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Cookie Policy</a></li>
-                        <li><a href="#">Anti-Fraud Policy</a></li>
-                        <li><a href="#">Complaints</a></li>
-                    </ul>
-                </div>
-                <div class="footer-contact">
-                    <h4>Contact Us</h4>
-                    <ul>
-                        <li><i class="fas fa-map-marker-alt"></i> 123 Finance Street, Toronto, ON</li>
-                        <li><i class="fas fa-phone"></i> +1 (416) 555-1234</li>
-                        <li><i class="fas fa-envelope"></i> support@sendafrika.com</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2025 SendAfrika. All rights reserved. | FINTRAC Reg. #: M23456789</p>
-                <div class="payment-methods">
-                    <i class="fab fa-cc-visa"></i>
-                    <i class="fab fa-cc-mastercard"></i>
-                    <i class="fab fa-cc-amex"></i>
-                    <i class="fab fa-cc-discover"></i>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <script>
+            <!-- Footer removed - we'll use the app container's layout instead -->
+            
+            <script>
         // Transfer data object to store form data across steps
         const transferData = {
             beneficiary: null,
@@ -1103,6 +1055,8 @@
                 }
             });
         }
-    </script>
+            </script>
+        </main>
+    </div>
 </body>
 </html>
