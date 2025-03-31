@@ -753,6 +753,64 @@
         }
         
         function calculateTransferDetails() {
+            // Use the helper function to calculate values
+            recalculateTransferDetailsOnly();
+            
+            // Update summary display without calling updateSummary
+            if (document.getElementById('section-2').classList.contains('active')) {
+                document.getElementById('summary-send-amount').textContent = `CAD ${transferData.amount.toFixed(2)}`;
+                document.getElementById('summary-receive-amount').textContent = `${transferData.destinationCurrency} ${transferData.destinationAmount.toFixed(2)}`;
+                document.getElementById('summary-fee').textContent = `CAD ${transferData.fee.toFixed(2)}`;
+                document.getElementById('summary-total').textContent = `CAD ${transferData.totalAmount.toFixed(2)}`;
+                document.getElementById('exchange-rate-info').textContent = `1 CAD = ${transferData.exchangeRate.toFixed(2)} ${transferData.destinationCurrency}`;
+                
+                // Get current chart type
+                const chartType = document.getElementById('chart-type-line').classList.contains('active-chart-btn') ? 'line' : 'bar';
+                
+                // Update currency chart
+                updateCurrencyChart(chartType);
+            }
+        }
+        
+        // Variable to store chart instance
+        let currencyChart = null;
+        
+        function updateSummary() {
+            // If we're on the amount step, read values from form
+            if (document.getElementById('section-2').classList.contains('active')) {
+                const amount = parseFloat(document.getElementById('source-amount').value) || 0;
+                const destinationCurrency = document.getElementById('destination-currency').value;
+                
+                transferData.amount = amount;
+                transferData.destinationCurrency = destinationCurrency;
+                
+                // Recalculate transfer details without updating the UI (to avoid circular dependency)
+                recalculateTransferDetailsOnly();
+                
+                // Now update the summary display
+                document.getElementById('summary-send-amount').textContent = `CAD ${transferData.amount.toFixed(2)}`;
+                document.getElementById('summary-receive-amount').textContent = `${transferData.destinationCurrency} ${transferData.destinationAmount.toFixed(2)}`;
+                document.getElementById('summary-fee').textContent = `CAD ${transferData.fee.toFixed(2)}`;
+                document.getElementById('summary-total').textContent = `CAD ${transferData.totalAmount.toFixed(2)}`;
+                document.getElementById('exchange-rate-info').textContent = `1 CAD = ${transferData.exchangeRate.toFixed(2)} ${transferData.destinationCurrency}`;
+                
+                // Get current chart type
+                const chartType = document.getElementById('chart-type-line').classList.contains('active-chart-btn') ? 'line' : 'bar';
+                
+                // Update currency visualization chart with the current chart type
+                updateCurrencyChart(chartType);
+            } else {
+                // Just update summary display for other steps
+                document.getElementById('summary-send-amount').textContent = `CAD ${transferData.amount.toFixed(2)}`;
+                document.getElementById('summary-receive-amount').textContent = `${transferData.destinationCurrency} ${transferData.destinationAmount.toFixed(2)}`;
+                document.getElementById('summary-fee').textContent = `CAD ${transferData.fee.toFixed(2)}`;
+                document.getElementById('summary-total').textContent = `CAD ${transferData.totalAmount.toFixed(2)}`;
+                document.getElementById('exchange-rate-info').textContent = `1 CAD = ${transferData.exchangeRate.toFixed(2)} ${transferData.destinationCurrency}`;
+            }
+        }
+        
+        // Helper function to recalculate values without updating UI
+        function recalculateTransferDetailsOnly() {
             // Calculate fee
             let fee = 0;
             if (transferData.amount <= 100) {
@@ -776,36 +834,6 @@
             transferData.exchangeRate = exchangeRate;
             transferData.destinationAmount = destinationAmount;
             transferData.totalAmount = transferData.amount; // Total amount is just the source amount in this case
-            
-            // Update summary
-            updateSummary();
-        }
-        
-        // Variable to store chart instance
-        let currencyChart = null;
-        
-        function updateSummary() {
-            // If we're on the amount step, read values from form
-            if (document.getElementById('section-2').classList.contains('active')) {
-                const amount = parseFloat(document.getElementById('source-amount').value) || 0;
-                const destinationCurrency = document.getElementById('destination-currency').value;
-                
-                transferData.amount = amount;
-                transferData.destinationCurrency = destinationCurrency;
-                
-                // Recalculate transfer details
-                calculateTransferDetails();
-            }
-            
-            // Update summary display
-            document.getElementById('summary-send-amount').textContent = `CAD ${transferData.amount.toFixed(2)}`;
-            document.getElementById('summary-receive-amount').textContent = `${transferData.destinationCurrency} ${transferData.destinationAmount.toFixed(2)}`;
-            document.getElementById('summary-fee').textContent = `CAD ${transferData.fee.toFixed(2)}`;
-            document.getElementById('summary-total').textContent = `CAD ${transferData.totalAmount.toFixed(2)}`;
-            document.getElementById('exchange-rate-info').textContent = `1 CAD = ${transferData.exchangeRate.toFixed(2)} ${transferData.destinationCurrency}`;
-            
-            // Update currency visualization chart
-            updateCurrencyChart();
         }
         
         function calculateFeeForAmount(amount) {
