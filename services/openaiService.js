@@ -1,118 +1,311 @@
-// OpenAI service for the server
+/**
+ * OpenAI Service
+ * 
+ * This service provides AI-powered financial insights and customer support
+ * capabilities to the application, leveraging OpenAI's advanced models.
+ */
+
 const OpenAI = require('openai');
-const dotenv = require('dotenv');
-dotenv.config();
 
-// Initialize OpenAI client with API key from environment variables
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-/**
- * Generate an AI response to a chat message
- * @param {Array} messages - Array of message objects with role and content
- * @returns {Promise<string>} The AI generated response
- */
-async function generateChatResponse(messages) {
-  try {
-    // If OpenAI API key is not provided, use the rule-based fallback
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('No OpenAI API key found, using fallback responses');
-      
-      // Get the last user message
-      const lastUserMessage = messages
-        .filter(m => m.role === 'user')
-        .pop();
-      
-      if (!lastUserMessage || !lastUserMessage.content) {
-        return "I'm Rafiki, your AI assistant for SendAfrika! How can I help you today?";
-      }
-      
-      // Use the local rule-based function
-      return require('../server').generateResponse(lastUserMessage.content);
-    }
-
-    // Use the OpenAI API for a more sophisticated response
-    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are Rafiki, an expert AI assistant for SendAfrika, a money transfer service from Canada to Africa. " +
-            "Provide friendly, concise, and accurate information about money transfers, exchange rates, fees, " +
-            "transfer times, supported countries, and payment methods. " +
-            "Be warm and professional in your responses. If unsure about specific details, be honest and suggest contacting customer support. " +
-            "Remember that SendAfrika allows money transfers from Canada to Nigeria, Ghana, Kenya, South Africa, Uganda, Senegal, and Côte d'Ivoire."
-        },
-        ...messages
-      ],
-      max_tokens: 500
+class OpenAIService {
+  constructor() {
+    // Initialize OpenAI client with API key
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
     });
-
-    return response.choices[0].message.content;
-  } catch (error) {
-    console.error('OpenAI API error:', error);
-    
-    // Fallback if OpenAI fails
-    return "I'm sorry, but I'm having trouble connecting to my knowledge base right now. " +
-      "Please try again later or contact our customer support for immediate assistance.";
   }
-}
 
-/**
- * Analyze a transaction for potential fraud or risk
- * @param {Object} transactionData - Transaction details to analyze
- * @returns {Promise<Object>} Risk assessment results
- */
-async function analyzeTransaction(transactionData) {
-  try {
-    // If OpenAI API key is not provided, use the rule-based fallback
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('No OpenAI API key found, using rule-based analysis');
+  /**
+   * Generate a response to a customer support query
+   * @param {string} query The user's support query
+   * @param {Object} userContext Additional context about the user
+   * @returns {Promise<string>} AI-generated response
+   */
+  async getCustomerSupportResponse(query, userContext = {}) {
+    try {
+      // Create a system message with appropriate context and guidelines
+      const systemPrompt = `You are "Rafiki", a helpful AI assistant specializing in cross-border money transfers from Canada to Africa.
       
-      // Use the local rule-based approach (handled in server.js route)
-      return null;
-    }
+Your role is to provide accurate, trustworthy information about:
+- SendAfrika's money transfer services
+- Exchange rates and fees
+- Supported payment methods and delivery options
+- Security procedures and regulatory compliance
+- Supported countries and currencies
+- Transaction processing times
 
-    // Use the OpenAI API for more sophisticated analysis
-    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
+Guidelines:
+- Be conversational but professional
+- Provide clear, concise answers
+- Never make up information about transfer rates or services
+- Avoid discussing politics or sensitive national issues
+- Focus on the specific user query
+- If you're unsure of an answer, suggest contacting customer support
+- Respect user privacy - don't ask for personal or account information
+
+User context:
+- Name: ${userContext.firstName || 'Valued customer'}
+- Country: ${userContext.country || 'Canada'}
+${userContext.recentTransactions ? `- Recent transactions: ${userContext.recentTransactions}` : ''}`;
+
+      // Call OpenAI API with the user query and system prompt
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: query }
+        ],
+        max_tokens: 500
+      });
+
+      return response.choices[0].message.content;
+    } catch (error) {
+      console.error('OpenAI API error:', error);
+      
+      // Provide more intelligent fallback responses based on the query
+      if (query.toLowerCase().includes('exchange rate') || query.toLowerCase().includes('rate')) {
+        return "I understand you're asking about exchange rates. We offer competitive rates for transfers to various African countries including Nigeria, Kenya, Ghana, and more. Our rates are updated daily based on market conditions. For the most current rates, please check the Send Money section of our app or contact our customer support team at support@sendafrika.com.";
+      } else if (query.toLowerCase().includes('fee') || query.toLowerCase().includes('cost')) {
+        return "Regarding fees, SendAfrika charges a transparent fee structure based on the amount you're sending. For transfers under $1,000, our fee is 3.5% of the transfer amount. For transfers between $1,000 and $5,000, the fee drops to 2.5%. Transfers above $5,000 have a fee of 1.5%. We're committed to providing competitive pricing for our customers.";
+      } else if (query.toLowerCase().includes('time') || query.toLowerCase().includes('how long') || query.toLowerCase().includes('duration')) {
+        return "Transfer times vary by destination and payment method. Mobile money transfers typically arrive within minutes to 2 hours. Bank transfers generally take 1-2 business days. Cash pickups are usually available within a few hours of sending. Actual times may vary based on recipient country regulations and local banking hours.";
+      } else if (query.toLowerCase().includes('country') || query.toLowerCase().includes('countries') || query.toLowerCase().includes('support')) {
+        return "SendAfrika currently supports money transfers to multiple African countries including Nigeria, Kenya, Ghana, Uganda, Tanzania, Senegal, Côte d'Ivoire, Cameroon, and South Africa. We're continuously expanding our coverage to serve more countries and regions.";
+      } else {
+        return "I apologize, but I'm currently experiencing connection issues. For information about SendAfrika's services, please check our FAQ section or contact our customer support team at support@sendafrika.com or call us at +1-800-SEND-AFR.";
+      }
+    }
+  }
+
+  /**
+   * Analyze a transaction to provide insights
+   * @param {Object} transaction Transaction details to analyze
+   * @returns {Promise<Object>} Analysis results including insights and recommendations
+   */
+  async analyzeTransaction(transaction) {
+    try {
+      const prompt = `Analyze the following money transfer transaction and provide helpful insights:
+      
+Transaction details:
+- Amount: ${transaction.sourceAmount} ${transaction.sourceCurrency} to ${transaction.destinationAmount} ${transaction.destinationCurrency}
+- Exchange rate: ${transaction.exchangeRate}
+- Fee: ${transaction.fee} ${transaction.sourceCurrency}
+- Recipient country: ${transaction.recipientCountry || 'Unknown'}
+- Transfer method: ${transaction.paymentMethod || 'Unknown'}
+- Status: ${transaction.status || 'Unknown'}
+
+Please include:
+1. A brief assessment of the exchange rate quality (favorable, average, unfavorable)
+2. Potential fee-saving opportunities for future transfers
+3. Any relevant market or economic insights for the countries involved
+4. Estimated delivery time based on the payment method
+5. Any security or compliance considerations`;
+
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          { 
+            role: "system", 
+            content: "You are an AI financial analyst specializing in cross-border money transfers. Provide concise, actionable insights based on transaction data. Format your response as JSON with the following keys: exchangeRateAssessment, feeSavingTips, marketInsights, estimatedDeliveryTime, securityTips. Keep each section brief and focused." 
+          },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      // Parse the JSON response
+      return JSON.parse(response.choices[0].message.content);
+    } catch (error) {
+      console.error('Transaction analysis error:', error);
+      
+      // Provide a useful fallback response based on transaction details
+      const destinationCurrency = transaction.destinationCurrency || '';
+      const paymentMethod = transaction.paymentMethod || '';
+      
+      // Create a fallback analysis with generic but helpful information
+      return {
+        exchangeRateAssessment: "We are unable to provide a personalized exchange rate assessment at this moment. Our rates are updated daily to ensure competitive pricing for all destinations.",
+        
+        feeSavingTips: "To save on fees, consider bundling multiple smaller transfers into a single larger transaction. Our fee percentage decreases as the transfer amount increases. Also, check for promotional offers in the app.",
+        
+        marketInsights: `The ${destinationCurrency} market has been showing typical fluctuations. For the most up-to-date economic insights, please check our market updates section or consult with our financial advisors.`,
+        
+        estimatedDeliveryTime: paymentMethod.includes('bank') ? 
+          "Bank transfers typically arrive within 1-2 business days depending on the recipient's bank processing times." : 
+          paymentMethod.includes('mobile') ? 
+            "Mobile money transfers usually complete within minutes to a few hours, depending on network status." : 
+            "Your transfer method typically delivers funds within 24-48 hours. Status updates will be provided via SMS and email.",
+        
+        securityTips: "Always verify recipient details before confirming transfers. Enable two-factor authentication for your account. Be cautious of phishing attempts - we will never ask for your password or full account details via email or SMS."
+      };
+    }
+  }
+
+  /**
+   * Generate helpful tips for sending money to a specific country
+   * @param {string} countryCode The destination country code
+   * @returns {Promise<Array>} List of tips and recommendations
+   */
+  async getCountryTransferTips(countryCode) {
+    try {
+      const prompt = `Provide practical tips and information for sending money from Canada to ${countryCode}. 
+      Focus on specific details relevant to this country, including:
+      
+      1. Popular and reliable transfer methods in ${countryCode}
+      2. Typical delivery times
+      3. Common fees and exchange rate considerations
+      4. Local regulations or requirements to be aware of
+      5. Best practices for ensuring successful delivery
+      
+      Format your response as a JSON array of tip objects with "title" and "description" fields.`;
+
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          { 
+            role: "system", 
+            content: "You are a financial advisor specializing in international money transfers with deep knowledge of African financial systems. Provide accurate, practical advice tailored to specific countries." 
+          },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      // Parse the JSON response
+      return JSON.parse(response.choices[0].message.content);
+    } catch (error) {
+      console.error('Country tips generation error:', error);
+      
+      // Create fallback tips based on common knowledge for African countries
+      const countrySpecificTips = this.getFallbackCountryTips(countryCode);
+      
+      return {
+        tips: countrySpecificTips,
+        fallback: true,
+        note: "These are general guidelines. For more specific information, please contact customer support."
+      };
+    }
+  }
+  
+  /**
+   * Provides fallback country tips when API is unavailable
+   * @param {string} countryCode Two-letter country code
+   * @returns {Array} Array of tip objects with title and description
+   */
+  getFallbackCountryTips(countryCode) {
+    // Common tips for all countries
+    const commonTips = [
+      {
+        title: "Verify Recipient Information",
+        description: "Double-check all recipient details before confirming your transfer, especially account numbers and mobile numbers."
+      },
+      {
+        title: "Be Aware of Exchange Rate Fluctuations",
+        description: "Currency exchange rates can change daily. Check the rate before sending to get the best value."
+      },
+      {
+        title: "Consider Larger Transfers",
+        description: "Sending larger amounts at once often results in lower fees than multiple smaller transfers."
+      }
+    ];
+    
+    // Country-specific tips based on common knowledge
+    const countryTips = {
+      'NG': [ // Nigeria
         {
-          role: "system",
-          content: "You are a fraud detection AI for cross-border money transfers. " +
-            "Analyze the transaction for potential risks and fraud indicators. " +
-            "Return a JSON object with the following fields: risk (low, medium, or high), " +
-            "confidence (a number between 0 and 1), flags (an array of risk factors), " +
-            "recommendation (approve, review, or reject), and explanation (detailed reasoning)."
+          title: "Mobile Money Options",
+          description: "Mobile money services like Paga and OPay are widely available in Nigeria and offer quick delivery times."
         },
         {
-          role: "user",
-          content: `Analyze this transaction: ${JSON.stringify(transactionData)}`
+          title: "Bank Transfer Considerations",
+          description: "Nigerian banks typically process international transfers within 1-2 business days. Some banks may require additional verification."
         }
       ],
-      response_format: { type: "json_object" }
-    });
-
-    // Parse the JSON response
-    const analysis = JSON.parse(response.choices[0].message.content);
-    
-    return {
-      risk: analysis.risk,
-      confidence: analysis.confidence,
-      flags: analysis.flags,
-      recommendation: analysis.recommendation,
-      explanation: analysis.explanation
+      'KE': [ // Kenya
+        {
+          title: "M-Pesa Popularity",
+          description: "M-Pesa is the dominant mobile money service in Kenya, offering nearly instant transfers to registered users."
+        },
+        {
+          title: "ID Requirements",
+          description: "Recipients may need to show government-issued ID when collecting funds at agent locations."
+        }
+      ],
+      'GH': [ // Ghana
+        {
+          title: "Mobile Money Growth",
+          description: "MTN Mobile Money, Airtel Money, and Vodafone Cash are widely used throughout Ghana for receiving funds."
+        },
+        {
+          title: "Cash Pickup Locations",
+          description: "Ghana has an extensive network of cash pickup locations in urban and many rural areas."
+        }
+      ],
+      'ZA': [ // South Africa
+        {
+          title: "Bank Transfer Efficiency",
+          description: "South Africa has a modern banking system that typically processes transfers efficiently within 1-2 business days."
+        },
+        {
+          title: "Documentation Requirements",
+          description: "Recipients may need to provide additional documentation for large transfers due to South Africa's stringent financial regulations."
+        }
+      ],
+      'SN': [ // Senegal
+        {
+          title: "Orange Money Availability",
+          description: "Orange Money is widely used in Senegal and offers a convenient way to receive funds directly to mobile accounts."
+        },
+        {
+          title: "Cash Pickup Considerations",
+          description: "For cash pickup in Senegal, recipients should bring their ID and the transaction reference number."
+        }
+      ],
+      'CI': [ // Côte d'Ivoire
+        {
+          title: "Mobile Money Services",
+          description: "Orange Money and MTN Mobile Money are popular in Côte d'Ivoire for receiving international transfers."
+        },
+        {
+          title: "Banking Hours",
+          description: "Bank branches in Côte d'Ivoire typically operate from 8:00 AM to 3:30 PM on weekdays. Plan pickup times accordingly."
+        }
+      ],
+      'CM': [ // Cameroon
+        {
+          title: "MTN Mobile Money and Orange Money",
+          description: "Both services are widely available in Cameroon and offer quick access to transferred funds."
+        },
+        {
+          title: "Rural Delivery",
+          description: "For transfers to rural areas in Cameroon, mobile money may offer better accessibility than bank transfers."
+        }
+      ],
+      'UG': [ // Uganda
+        {
+          title: "Mobile Money Networks",
+          description: "MTN Mobile Money and Airtel Money have extensive networks throughout Uganda, making them convenient options."
+        },
+        {
+          title: "Delivery Speed",
+          description: "Mobile money transfers to Uganda typically complete within minutes to a few hours after sending."
+        }
+      ],
+      'TZ': [ // Tanzania
+        {
+          title: "M-Pesa Availability",
+          description: "M-Pesa is widely used in Tanzania and offers a reliable method for receiving international transfers."
+        },
+        {
+          title: "ID Requirements",
+          description: "Recipients will need to present valid identification that matches the name on the transfer."
+        }
+      ]
     };
-  } catch (error) {
-    console.error('OpenAI API error during transaction analysis:', error);
     
-    // Return null to indicate the system should use the fallback analysis
-    return null;
+    // Return country-specific tips if available, otherwise just common tips
+    return countryTips[countryCode] ? [...countryTips[countryCode], ...commonTips] : commonTips;
   }
 }
 
-module.exports = {
-  generateChatResponse,
-  analyzeTransaction
-};
+module.exports = new OpenAIService();

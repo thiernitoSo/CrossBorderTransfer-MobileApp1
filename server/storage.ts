@@ -49,8 +49,11 @@ export interface Transaction {
   beneficiaryId: string;
   beneficiaryName: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
+  statusMessage?: string;
   paymentMethod: string;
+  provider?: string;
   reference: string;
+  externalTransactionId?: string;
   note?: string;
   createdAt: string;
   updatedAt: string;
@@ -63,7 +66,7 @@ export interface ResetToken {
 }
 
 export interface IStorage {
-  sessionStore: session.Store;
+  sessionStore: any; // Express session store
   
   // User methods
   createUser(userData: Partial<User>): Promise<User>;
@@ -99,7 +102,7 @@ class MemStorage implements IStorage {
   private transactions: Transaction[] = [];
   private resetTokens: ResetToken[] = [];
   
-  sessionStore: session.Store;
+  sessionStore: any;
   
   constructor() {
     this.sessionStore = new MemoryStore({
@@ -171,8 +174,11 @@ class MemStorage implements IStorage {
       beneficiaryId: '2',
       beneficiaryName: 'Ngozi Okonkwo',
       status: 'completed',
+      statusMessage: 'Transfer completed successfully',
       paymentMethod: 'card',
+      provider: 'rafiki',
       reference: 'TX12345',
+      externalTransactionId: 'RAF9876543210',
       note: 'For school fees',
       createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
       updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -190,8 +196,11 @@ class MemStorage implements IStorage {
       beneficiaryId: '1',
       beneficiaryName: 'Kwame Nkrumah',
       status: 'pending',
+      statusMessage: 'Awaiting payment confirmation',
       paymentMethod: 'bank',
+      provider: 'orange_money',
       reference: 'TX67890',
+      externalTransactionId: 'OM12345678',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -314,8 +323,11 @@ class MemStorage implements IStorage {
       beneficiaryId: '',
       beneficiaryName: '',
       status: 'pending',
+      statusMessage: '',
       paymentMethod: '',
       reference: '',
+      provider: undefined,
+      externalTransactionId: undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ...data,

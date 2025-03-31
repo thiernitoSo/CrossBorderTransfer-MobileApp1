@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { View, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
@@ -19,9 +19,9 @@ export default function Index() {
       if (isLoading) return;
       
       if (isAuthenticated) {
-        router.replace('/dashboard');
+        router.replace('/(authenticated)/dashboard');
       } else {
-        router.replace('/auth');
+        router.replace('/(auth)/auth');
       }
     };
 
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   },
   logoText: {
     fontSize: theme.fontSizes.xxxl,
-    fontWeight: theme.fontWeights.bold,
+    fontWeight: 'bold' as const,
     color: theme.colors.primary,
     marginTop: theme.spacing.sm,
   },

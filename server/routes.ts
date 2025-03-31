@@ -3,6 +3,9 @@ import { createServer, Server } from 'http';
 import { setupAuth } from './auth';
 import { storage } from './storage';
 import OpenAI from 'openai';
+import { paymentService, QuoteData, PaymentRequest } from '../services/payment';
+import { rafikiService } from '../services/rafiki';
+import { orangeMoneyService } from '../services/orangeMoney';
 
 export function registerRoutes(app: Express): Server {
   // Sets up /api/register, /api/login, /api/logout, /api/user
@@ -202,29 +205,49 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
-      const { amount, sourceCurrency, destinationCurrency } = req.body;
+      const { 
+        sourceAmount, 
+        destinationAmount, 
+        sourceCurrency, 
+        destinationCurrency, 
+        destinationCountry,
+        paymentMethod 
+      } = req.body;
       
-      if (!amount || !sourceCurrency || !destinationCurrency) {
+      if (!sourceCurrency || !destinationCurrency || !destinationCountry || !paymentMethod) {
         return res.status(400).json({ error: 'Missing required parameters' });
       }
       
-      // This would normally call a third-party service for real exchange rates
-      // For now, use mock data from our service
-      const quote = {
-        sourceAmount: parseFloat(amount),
+      if (!sourceAmount && !destinationAmount) {
+        return res.status(400).json({ error: 'Either sourceAmount or destinationAmount is required' });
+      }
+      
+      // Check if the payment method is available for this country
+      if (!paymentService.isPaymentMethodAvailableForCountry(paymentMethod, destinationCountry)) {
+        return res.status(400).json({ 
+          error: `Payment method ${paymentMethod} is not available for ${destinationCountry}`,
+          availableMethods: paymentService.getAvailablePaymentMethods(destinationCountry)
+        });
+      }
+      
+      // Get quote from payment service
+      const quoteData: QuoteData = {
+        sourceAmount: sourceAmount ? parseFloat(sourceAmount) : undefined,
+        destinationAmount: destinationAmount ? parseFloat(destinationAmount) : undefined,
         sourceCurrency,
-        destinationAmount: parseFloat(amount) * 550.75, // Mock exchange rate
         destinationCurrency,
-        exchangeRate: 550.75,
-        fee: parseFloat(amount) * 0.055, // 5.5% fee
-        totalAmount: parseFloat(amount) * 1.055, // Amount + fee
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min expiry
+        destinationCountry,
+        paymentMethod
       };
       
+      const quote = await paymentService.getQuote(quoteData);
       res.json(quote);
     } catch (error) {
       console.error('Get transaction quote error:', error);
-      res.status(500).json({ error: 'Failed to get quote' });
+      res.status(500).json({ 
+        error: 'Failed to get quote', 
+        message: error.message 
+      });
     }
   });
 
@@ -233,34 +256,114 @@ export function registerRoutes(app: Express): Server {
     
     try {
       const userId = (req.user as any).id;
-      const transactionData = req.body;
+      const { 
+        quoteId,
+        sourceAmount,
+        destinationAmount,
+        sourceCurrency,
+        destinationCurrency,
+        paymentMethod,
+        provider,
+        beneficiaryId,
+        phoneNumber
+      } = req.body;
+      
+      // Validate required fields
+      if (!sourceAmount || !destinationAmount || !sourceCurrency || !destinationCurrency || 
+          !paymentMethod || !provider || !beneficiaryId) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+      }
       
       // Validate beneficiary belongs to user
-      const beneficiary = await storage.getBeneficiary(transactionData.beneficiaryId);
+      const beneficiary = await storage.getBeneficiary(beneficiaryId);
       if (!beneficiary || beneficiary.userId !== userId) {
         return res.status(400).json({ error: 'Invalid beneficiary' });
       }
       
-      // Create a transaction with a random reference number
+      // Create a payment request to the payment service
       const reference = Math.random().toString(36).substring(2, 10).toUpperCase();
-      const transaction = await storage.createTransaction({
-        ...transactionData,
-        userId,
+      
+      // Prepare payment request based on provider
+      const paymentRequest: PaymentRequest = {
+        quoteId,
+        sourceAmount: parseFloat(sourceAmount),
+        destinationAmount: parseFloat(destinationAmount),
+        sourceCurrency,
+        destinationCurrency,
+        paymentMethod,
+        provider,
+        description: `SendAfrika transfer to ${beneficiary.firstName} ${beneficiary.lastName}`,
         reference,
-        status: 'pending',
-        sourceAmount: parseFloat(transactionData.amount),
-        sourceCurrency: 'CAD', // Assuming CAD as source for now
-        destinationAmount: parseFloat(transactionData.amount) * 550.75, // Mock exchange rate
-        destinationCurrency: transactionData.destinationCurrency,
-        exchangeRate: 550.75,
-        fee: parseFloat(transactionData.amount) * 0.055, // 5.5% fee
+        beneficiaryId,
+        phoneNumber,
+      };
+      
+      // If using Rafiki, add destination details
+      if (provider === 'rafiki') {
+        const destination = {
+          type: paymentMethod === 'bank_transfer' ? 'bank_account' : 
+                paymentMethod === 'cash_pickup' ? 'cash_pickup' : 'mobile_wallet',
+          countryCode: beneficiary.country,
+          firstName: beneficiary.firstName,
+          lastName: beneficiary.lastName,
+        };
+        
+        // Add specific payment details based on payment method
+        if (paymentMethod === 'bank_transfer' && beneficiary.bankName && beneficiary.accountNumber) {
+          Object.assign(destination, {
+            bankAccount: {
+              accountNumber: beneficiary.accountNumber,
+              bankCode: beneficiary.bankName,
+              branchCode: beneficiary.branchCode,
+            }
+          });
+        } else if ((paymentMethod === 'mobile_money' || paymentMethod === 'orange_money') && beneficiary.phoneNumber) {
+          Object.assign(destination, {
+            mobileWallet: {
+              phoneNumber: beneficiary.phoneNumber,
+              provider: beneficiary.mobileMoneyProvider || 'default',
+            }
+          });
+        }
+        
+        paymentRequest.destination = destination as any;
+      }
+      
+      // Initiate payment with payment service
+      const paymentResult = await paymentService.initiatePayment(paymentRequest);
+      
+      // Store the transaction in our database
+      const transaction = await storage.createTransaction({
+        userId,
+        sourceAmount: paymentResult.sourceAmount,
+        sourceCurrency: paymentResult.sourceCurrency,
+        destinationAmount: paymentResult.destinationAmount,
+        destinationCurrency: paymentResult.destinationCurrency,
+        exchangeRate: paymentResult.exchangeRate,
+        fee: paymentResult.fee,
+        beneficiaryId,
         beneficiaryName: `${beneficiary.firstName} ${beneficiary.lastName}`,
+        status: paymentResult.status,
+        statusMessage: paymentResult.message,
+        paymentMethod,
+        provider,
+        reference: paymentResult.reference,
+        externalTransactionId: paymentResult.id,
+        note: req.body.note,
       });
       
-      res.status(201).json(transaction);
+      // Return the combined result
+      res.status(201).json({
+        ...transaction,
+        paymentUrl: paymentResult.paymentUrl,
+        externalTransactionId: paymentResult.id,
+      });
     } catch (error) {
       console.error('Create transaction error:', error);
-      res.status(500).json({ error: 'Failed to create transaction' });
+      res.status(500).json({ 
+        error: 'Failed to create transaction',
+        message: error.message
+      });
     }
   });
 
@@ -280,11 +383,38 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: 'Only pending transactions can be cancelled' });
       }
       
-      const updatedTransaction = await storage.updateTransaction(transactionId, { status: 'failed' });
-      res.json(updatedTransaction);
+      // Cancel the transaction with the payment provider if it has an external ID
+      let externalCancelSuccess = false;
+      
+      if (transaction.externalTransactionId && transaction.provider) {
+        externalCancelSuccess = await paymentService.cancelPayment(
+          transaction.externalTransactionId, 
+          transaction.provider as any
+        );
+      }
+      
+      // Update transaction status in our database
+      const status = externalCancelSuccess ? 'cancelled' : 'failed';
+      const statusMessage = externalCancelSuccess 
+        ? 'Transaction cancelled successfully' 
+        : 'Transaction marked as failed, but may still be processing with provider';
+      
+      const updatedTransaction = await storage.updateTransaction(transactionId, { 
+        status, 
+        statusMessage,
+        updatedAt: new Date().toISOString()
+      });
+      
+      res.json({
+        ...updatedTransaction,
+        externalCancelSuccess
+      });
     } catch (error) {
       console.error('Cancel transaction error:', error);
-      res.status(500).json({ error: 'Failed to cancel transaction' });
+      res.status(500).json({ 
+        error: 'Failed to cancel transaction',
+        message: error.message 
+      });
     }
   });
 
@@ -303,6 +433,36 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Get transaction stats error:', error);
       res.status(500).json({ error: 'Failed to retrieve transaction stats' });
+    }
+  });
+
+  // Payment methods routes
+  app.get('/api/payment-methods/:countryCode', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const countryCode = req.params.countryCode.toUpperCase();
+      
+      const availableMethods = paymentService.getAvailablePaymentMethods(countryCode);
+      
+      // Check which providers support this country
+      const orangeMoneySupported = orangeMoneyService.getSupportedCountries().includes(countryCode);
+      const rafikiSupported = rafikiService.getSupportedCountries().includes(countryCode);
+      
+      res.json({
+        country: countryCode,
+        availableMethods,
+        providers: {
+          orangeMoney: orangeMoneySupported,
+          rafiki: rafikiSupported
+        }
+      });
+    } catch (error) {
+      console.error('Get payment methods error:', error);
+      res.status(500).json({ 
+        error: 'Failed to get payment methods',
+        message: error.message
+      });
     }
   });
 

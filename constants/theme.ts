@@ -68,10 +68,10 @@ const fontSizes = {
 };
 
 const fontWeights = {
-  regular: '400',
-  medium: '500',
-  semibold: '600',
-  bold: '700',
+  regular: '400' as const,
+  medium: '500' as const,
+  semibold: '600' as const,
+  bold: 'bold' as const,
 };
 
 // Extend the default theme with our custom theme

@@ -12,8 +12,28 @@ const { v4: uuidv4 } = require('uuid');
 // Load environment variables
 dotenv.config();
 
-// Import OpenAI service (will use fallback if API key not available)
-const openaiService = require('./services/openaiService');
+// Import payment services if available
+let orangeMoneyService, rafikiService, paymentService;
+let openaiService;
+
+try {
+  // These services are written in TypeScript, so we need to check if they're compiled
+  orangeMoneyService = require('./services/orangeMoney').orangeMoneyService;
+  rafikiService = require('./services/rafiki').rafikiService;
+  paymentService = require('./services/payment').paymentService;
+  console.log('Payment services loaded successfully');
+} catch (error) {
+  console.warn('Payment services not available:', error.message);
+}
+
+// Load the OpenAI service for AI-powered features
+try {
+  openaiService = require('./services/openaiService');
+  console.log('OpenAI service loaded successfully');
+} catch (error) {
+  console.warn('Could not load OpenAI service:', error.message);
+  console.warn('AI-powered features will not be available');
+}
 
 // Create Express application
 const app = express();
@@ -1034,6 +1054,272 @@ app.post('/api/analyze-transaction', async (req, res) => {
     res.status(500).json({ message: 'Failed to analyze transaction', error: error.message });
   }
 });
+
+// Payment API routes (Orange Money and Rafiki integration)
+// Only available if the payment services are loaded
+if (paymentService) {
+  // Check available payment providers for a country
+  app.get('/api/payments/providers/:countryCode', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { countryCode } = req.params;
+      const providers = await paymentService.getAvailableProvidersForCountry(countryCode);
+      res.json({ providers });
+    } catch (error) {
+      console.error('Error getting payment providers:', error);
+      res.status(500).json({ message: 'Failed to get payment providers', error: error.message });
+    }
+  });
+
+  // Get exchange rate information
+  app.get('/api/payments/exchange-rate', async (req, res) => {
+    try {
+      const { sourceCurrency, destinationCurrency } = req.query;
+      
+      if (!sourceCurrency || !destinationCurrency) {
+        return res.status(400).json({ message: 'Source and destination currencies are required' });
+      }
+      
+      const exchangeRate = await paymentService.getExchangeRateInfo(
+        sourceCurrency.toString(),
+        destinationCurrency.toString()
+      );
+      
+      res.json(exchangeRate);
+    } catch (error) {
+      console.error('Error getting exchange rate:', error);
+      res.status(500).json({ message: 'Failed to get exchange rate', error: error.message });
+    }
+  });
+
+  // Initiate a payment transfer
+  app.post('/api/payments/transfer', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const paymentRequest = req.body;
+      
+      // Add user ID to the sender info
+      paymentRequest.senderInfo = {
+        ...paymentRequest.senderInfo,
+        userId: req.user.id,
+      };
+      
+      // Get beneficiary details if beneficiaryId is provided but not beneficiary info
+      if (paymentRequest.recipientInfo?.beneficiaryId && 
+          (!paymentRequest.recipientInfo.firstName || !paymentRequest.recipientInfo.lastName)) {
+        const beneficiary = await storage.getBeneficiary(paymentRequest.recipientInfo.beneficiaryId);
+        if (beneficiary && beneficiary.userId === req.user.id) {
+          paymentRequest.recipientInfo = {
+            ...paymentRequest.recipientInfo,
+            firstName: beneficiary.firstName,
+            lastName: beneficiary.lastName,
+            phone: beneficiary.phoneNumber,
+            country: beneficiary.country,
+            accountNumber: beneficiary.accountNumber,
+            bankName: beneficiary.bankName,
+            branchCode: beneficiary.branchCode,
+            mobileMoneyProvider: beneficiary.mobileMoneyProvider,
+            relationship: beneficiary.relationship,
+          };
+        }
+      }
+      
+      const result = await paymentService.initiateTransfer(paymentRequest);
+      
+      // Create a transaction record in our database
+      const newTransaction = await storage.createTransaction({
+        userId: req.user.id,
+        sourceAmount: result.sourceAmount,
+        sourceCurrency: result.sourceCurrency,
+        destinationAmount: result.destinationAmount,
+        destinationCurrency: result.destinationCurrency,
+        exchangeRate: result.exchangeRate,
+        fee: result.fee,
+        beneficiaryId: paymentRequest.recipientInfo.beneficiaryId,
+        beneficiaryName: `${paymentRequest.recipientInfo.firstName} ${paymentRequest.recipientInfo.lastName}`,
+        status: result.status,
+        paymentMethod: result.paymentMethod,
+        provider: result.provider,
+        reference: result.reference,
+        externalTransactionId: result.transactionId,
+        note: paymentRequest.note || '',
+      });
+      
+      res.status(201).json({
+        ...result,
+        transactionId: newTransaction.id,
+      });
+    } catch (error) {
+      console.error('Error initiating payment transfer:', error);
+      res.status(500).json({ message: 'Failed to initiate payment transfer', error: error.message });
+    }
+  });
+
+  // Check payment status
+  app.get('/api/payments/:id/status', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { id } = req.params;
+      
+      // Get transaction from our database
+      const transaction = await storage.getTransaction(id);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: 'Transaction not found' });
+      }
+      
+      if (transaction.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to access this transaction' });
+      }
+      
+      // If the transaction has an external transaction ID and provider, check the status
+      if (transaction.externalTransactionId && transaction.provider) {
+        try {
+          const status = await paymentService.checkTransactionStatus(
+            transaction.externalTransactionId,
+            transaction.provider
+          );
+          
+          // Update transaction status in our database if it has changed
+          if (status.status !== transaction.status) {
+            await storage.updateTransaction(id, {
+              status: status.status,
+              statusMessage: status.statusMessage,
+            });
+          }
+          
+          res.json({
+            transactionId: id,
+            externalTransactionId: transaction.externalTransactionId,
+            status: status.status,
+            statusMessage: status.statusMessage,
+            updatedAt: status.updatedAt,
+          });
+        } catch (error) {
+          // If external status check fails, return current status from our database
+          console.error('Error checking external payment status:', error);
+          res.json({
+            transactionId: id,
+            externalTransactionId: transaction.externalTransactionId,
+            status: transaction.status,
+            statusMessage: 'Unable to check external payment status. Using last known status.',
+            updatedAt: transaction.updatedAt,
+          });
+        }
+      } else {
+        // If no external transaction ID or provider, just return current status from our database
+        res.json({
+          transactionId: id,
+          status: transaction.status,
+          updatedAt: transaction.updatedAt,
+        });
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+      res.status(500).json({ message: 'Failed to check payment status', error: error.message });
+    }
+  });
+}
+
+// OpenAI-powered AI features
+if (openaiService) {
+  // Customer support chat endpoint
+  app.post('/api/ai/support', async (req, res) => {
+    try {
+      const { query, userContext } = req.body;
+      
+      if (!query) {
+        return res.status(400).json({ message: 'Query is required' });
+      }
+      
+      // Add user authentication context if available
+      let context = userContext || {};
+      if (req.isAuthenticated()) {
+        context = {
+          ...context,
+          firstName: req.user.firstName,
+          lastName: req.user.lastName,
+          email: req.user.email,
+          country: 'Canada' // Default for now
+        };
+        
+        // Get user's recent transactions for context (last 2)
+        const recentTransactions = await storage.getTransactionsByUserId(req.user.id, 1, 2);
+        if (recentTransactions && recentTransactions.length > 0) {
+          context.recentTransactions = `${recentTransactions.length} recent transfers to ${recentTransactions.map(t => t.destinationCurrency).join(', ')}`;
+        }
+      }
+      
+      const response = await openaiService.getCustomerSupportResponse(query, context);
+      res.json({ response });
+    } catch (error) {
+      console.error('AI support error:', error);
+      res.status(500).json({ 
+        message: 'Failed to process support query',
+        error: error.message,
+        fallbackResponse: 'I apologize, but I encountered an issue processing your request. Please try again later or contact our customer support team directly.'
+      });
+    }
+  });
+  
+  // Transaction analysis endpoint
+  app.post('/api/transactions/:id/analyze', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const transaction = await storage.getTransaction(req.params.id);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: 'Transaction not found' });
+      }
+      
+      if (transaction.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to access this transaction' });
+      }
+      
+      // Get the beneficiary to determine recipient country
+      let recipientCountry = '';
+      if (transaction.beneficiaryId) {
+        const beneficiary = await storage.getBeneficiary(transaction.beneficiaryId);
+        if (beneficiary) {
+          recipientCountry = beneficiary.country;
+        }
+      }
+      
+      // Add recipient country to transaction data for analysis
+      const transactionForAnalysis = {
+        ...transaction,
+        recipientCountry
+      };
+      
+      const analysis = await openaiService.analyzeTransaction(transactionForAnalysis);
+      res.json(analysis);
+    } catch (error) {
+      console.error('Transaction analysis error:', error);
+      res.status(500).json({ message: 'Failed to analyze transaction', error: error.message });
+    }
+  });
+  
+  // Country transfer tips endpoint
+  app.get('/api/ai/country-tips/:countryCode', async (req, res) => {
+    try {
+      const { countryCode } = req.params;
+      
+      if (!countryCode || countryCode.length !== 2) {
+        return res.status(400).json({ message: 'Valid country code is required (ISO 2-letter code)' });
+      }
+      
+      const tips = await openaiService.getCountryTransferTips(countryCode);
+      res.json(tips);
+    } catch (error) {
+      console.error('Country tips error:', error);
+      res.status(500).json({ message: 'Failed to get country tips', error: error.message });
+    }
+  });
+}
 
 // Start the server
 // Catch-all route to serve the SPA for any non-API routes

@@ -16,9 +16,9 @@ const TabBar: React.FC = () => {
   const currentPath = usePathname();
 
   const tabs: TabItem[] = [
-    { label: 'Home', icon: 'home', route: '/dashboard' },
-    { label: 'Send', icon: 'send', route: '/send-money' },
-    { label: 'History', icon: 'clock', route: '/transactions' },
+    { label: 'Home', icon: 'home', route: '/(authenticated)/dashboard' },
+    { label: 'Send', icon: 'send', route: '/(authenticated)/send-money' },
+    { label: 'History', icon: 'clock', route: '/(authenticated)/transactions' },
     { label: 'Support', icon: 'message-circle', route: '/support' },
   ];
 
@@ -29,7 +29,8 @@ const TabBar: React.FC = () => {
   return (
     <View style={styles.container}>
       {tabs.map((tab) => {
-        const isActive = currentPath === tab.route;
+        const isActive = currentPath === tab.route || 
+                        (tab.route.includes(currentPath) && currentPath !== '/');
         
         return (
           <TouchableOpacity
