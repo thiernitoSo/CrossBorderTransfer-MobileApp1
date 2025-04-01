@@ -1,5 +1,4 @@
-import apiService from './api';
-import { getData, storeData, STORAGE_KEYS } from '../utils/storage';
+import { get, post, put, del } from './api';
 
 export interface Beneficiary {
   id: string;
@@ -30,26 +29,16 @@ export interface CreateBeneficiaryData {
   mobileMoneyProvider?: string;
 }
 
+export interface UpdateBeneficiaryData extends Partial<CreateBeneficiaryData> {}
+
 /**
  * Get all beneficiaries for current user
  */
 export const getBeneficiaries = async (): Promise<Beneficiary[]> => {
   try {
-    const beneficiaries = await apiService.get<Beneficiary[]>('/beneficiaries');
-    
-    // Cache beneficiaries locally
-    await storeData(STORAGE_KEYS.BENEFICIARIES, beneficiaries);
-    
-    return beneficiaries;
+    return await get('/api/beneficiaries');
   } catch (error) {
-    console.error('Get beneficiaries error:', error);
-    
-    // If API fails, try to get cached beneficiaries
-    const cachedBeneficiaries = await getData<Beneficiary[]>(STORAGE_KEYS.BENEFICIARIES);
-    if (cachedBeneficiaries) {
-      return cachedBeneficiaries;
-    }
-    
+    console.error('Failed to get beneficiaries:', error);
     throw error;
   }
 };
@@ -59,18 +48,9 @@ export const getBeneficiaries = async (): Promise<Beneficiary[]> => {
  */
 export const getBeneficiary = async (id: string): Promise<Beneficiary> => {
   try {
-    return await apiService.get<Beneficiary>(`/beneficiaries/${id}`);
+    return await get(`/api/beneficiaries/${id}`);
   } catch (error) {
-    console.error(`Get beneficiary ${id} error:`, error);
-    
-    // If API fails, try to get from cached beneficiaries
-    const cachedBeneficiaries = await getData<Beneficiary[]>(STORAGE_KEYS.BENEFICIARIES);
-    const cachedBeneficiary = cachedBeneficiaries?.find(b => b.id === id);
-    
-    if (cachedBeneficiary) {
-      return cachedBeneficiary;
-    }
-    
+    console.error(`Failed to get beneficiary ${id}:`, error);
     throw error;
   }
 };
@@ -82,15 +62,9 @@ export const createBeneficiary = async (
   data: CreateBeneficiaryData
 ): Promise<Beneficiary> => {
   try {
-    const newBeneficiary = await apiService.post<Beneficiary>('/beneficiaries', data);
-    
-    // Update local cache
-    const cachedBeneficiaries = await getData<Beneficiary[]>(STORAGE_KEYS.BENEFICIARIES) || [];
-    await storeData(STORAGE_KEYS.BENEFICIARIES, [...cachedBeneficiaries, newBeneficiary]);
-    
-    return newBeneficiary;
+    return await post('/api/beneficiaries', data);
   } catch (error) {
-    console.error('Create beneficiary error:', error);
+    console.error('Failed to create beneficiary:', error);
     throw error;
   }
 };
@@ -100,22 +74,12 @@ export const createBeneficiary = async (
  */
 export const updateBeneficiary = async (
   id: string,
-  data: Partial<CreateBeneficiaryData>
+  data: UpdateBeneficiaryData
 ): Promise<Beneficiary> => {
   try {
-    const updatedBeneficiary = await apiService.put<Beneficiary>(`/beneficiaries/${id}`, data);
-    
-    // Update local cache
-    const cachedBeneficiaries = await getData<Beneficiary[]>(STORAGE_KEYS.BENEFICIARIES) || [];
-    const updatedCache = cachedBeneficiaries.map(b => 
-      b.id === id ? updatedBeneficiary : b
-    );
-    
-    await storeData(STORAGE_KEYS.BENEFICIARIES, updatedCache);
-    
-    return updatedBeneficiary;
+    return await put(`/api/beneficiaries/${id}`, data);
   } catch (error) {
-    console.error(`Update beneficiary ${id} error:`, error);
+    console.error(`Failed to update beneficiary ${id}:`, error);
     throw error;
   }
 };
@@ -125,15 +89,9 @@ export const updateBeneficiary = async (
  */
 export const deleteBeneficiary = async (id: string): Promise<void> => {
   try {
-    await apiService.delete(`/beneficiaries/${id}`);
-    
-    // Update local cache
-    const cachedBeneficiaries = await getData<Beneficiary[]>(STORAGE_KEYS.BENEFICIARIES) || [];
-    const updatedCache = cachedBeneficiaries.filter(b => b.id !== id);
-    
-    await storeData(STORAGE_KEYS.BENEFICIARIES, updatedCache);
+    await del(`/api/beneficiaries/${id}`);
   } catch (error) {
-    console.error(`Delete beneficiary ${id} error:`, error);
+    console.error(`Failed to delete beneficiary ${id}:`, error);
     throw error;
   }
 };
@@ -145,15 +103,17 @@ export const getBeneficiariesByCountry = async (
   countryCode: string
 ): Promise<Beneficiary[]> => {
   try {
-    const all = await getBeneficiaries();
-    return all.filter(b => b.country === countryCode);
+    const allBeneficiaries = await getBeneficiaries();
+    return allBeneficiaries.filter(
+      (beneficiary) => beneficiary.country === countryCode
+    );
   } catch (error) {
-    console.error(`Get beneficiaries for country ${countryCode} error:`, error);
+    console.error(`Failed to get beneficiaries for country ${countryCode}:`, error);
     throw error;
   }
 };
 
-export const beneficiaryService = {
+export default {
   getBeneficiaries,
   getBeneficiary,
   createBeneficiary,
@@ -161,5 +121,3 @@ export const beneficiaryService = {
   deleteBeneficiary,
   getBeneficiariesByCountry,
 };
-
-export default beneficiaryService;

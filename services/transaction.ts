@@ -1,9 +1,8 @@
-import apiService from './api';
-import { getData, storeData, STORAGE_KEYS } from '../utils/storage';
-import { getExchangeRate, calculateFee } from '../constants/currencies';
+import { get, post, put, del } from './api';
 
 export interface Transaction {
   id: string;
+  userId: string;
   sourceAmount: number;
   sourceCurrency: string;
   destinationAmount: number;
@@ -12,23 +11,27 @@ export interface Transaction {
   fee: number;
   beneficiaryId: string;
   beneficiaryName: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  statusMessage?: string;
   paymentMethod: string;
+  provider?: string;
   reference: string;
+  externalTransactionId?: string;
   note?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CreateTransactionData {
-  amount: number;
-  beneficiaryId: string;
+export interface QuoteRequest {
+  sourceAmount?: number;
+  destinationAmount?: number;
+  sourceCurrency: string;
   destinationCurrency: string;
-  paymentMethod: string;
-  note?: string;
+  beneficiaryId?: string;
 }
 
-export interface TransactionQuote {
+export interface Quote {
+  id: string;
   sourceAmount: number;
   sourceCurrency: string;
   destinationAmount: number;
@@ -36,191 +39,115 @@ export interface TransactionQuote {
   exchangeRate: number;
   fee: number;
   totalAmount: number;
-  expiresAt: string;
+  validUntil: string;
+}
+
+export interface TransactionRequest {
+  quoteId: string;
+  beneficiaryId: string;
+  paymentMethod: string;
+  note?: string;
+}
+
+export interface TransactionStats {
+  totalCount: number;
+  completedCount: number;
+  pendingCount: number;
+  failedCount: number;
+  cancelledCount: number;
+  totalSent: {
+    amount: number;
+    currency: string;
+  };
+  averageAmount: {
+    amount: number;
+    currency: string;
+  };
+  lastTransactionDate: string;
 }
 
 /**
- * Get all transactions for current user
+ * Get all transactions for the current user
  */
-export const getTransactions = async (
-  page = 1,
-  limit = 10
-): Promise<{
+export const getTransactions = async (page: number = 1, limit: number = 10): Promise<{
   data: Transaction[];
   total: number;
   page: number;
-  limit: number;
+  pages: number;
 }> => {
   try {
-    const response = await apiService.get<{
-      data: Transaction[];
-      total: number;
-      page: number;
-      limit: number;
-    }>('/transactions', { page, limit });
-    
-    // Cache recent transactions
-    if (page === 1) {
-      await storeData(STORAGE_KEYS.RECENT_TRANSACTIONS, response.data);
-    }
-    
-    return response;
+    return await get('/api/transactions', { page, limit });
   } catch (error) {
-    console.error('Get transactions error:', error);
-    
-    // If API fails and requesting first page, try to get cached transactions
-    if (page === 1) {
-      const cachedTransactions = await getData<Transaction[]>(STORAGE_KEYS.RECENT_TRANSACTIONS);
-      if (cachedTransactions) {
-        return {
-          data: cachedTransactions,
-          total: cachedTransactions.length,
-          page: 1,
-          limit,
-        };
-      }
-    }
-    
+    console.error('Failed to get transactions:', error);
     throw error;
   }
 };
 
 /**
- * Get transaction by ID
+ * Get a single transaction by ID
  */
 export const getTransaction = async (id: string): Promise<Transaction> => {
   try {
-    return await apiService.get<Transaction>(`/transactions/${id}`);
+    return await get(`/api/transactions/${id}`);
   } catch (error) {
-    console.error(`Get transaction ${id} error:`, error);
-    
-    // If API fails, try to get from cached transactions
-    const cachedTransactions = await getData<Transaction[]>(STORAGE_KEYS.RECENT_TRANSACTIONS);
-    const cachedTransaction = cachedTransactions?.find(t => t.id === id);
-    
-    if (cachedTransaction) {
-      return cachedTransaction;
-    }
-    
+    console.error(`Failed to get transaction ${id}:`, error);
     throw error;
   }
 };
 
 /**
- * Get transaction quote
+ * Create a new money transfer quote
  */
-export const getTransactionQuote = async (
-  amount: number,
-  sourceCurrency: string,
-  destinationCurrency: string
-): Promise<TransactionQuote> => {
+export const createQuote = async (quoteRequest: QuoteRequest): Promise<Quote> => {
   try {
-    return await apiService.post<TransactionQuote>('/transactions/quote', {
-      amount,
-      sourceCurrency,
-      destinationCurrency,
-    });
+    return await post('/api/transactions/quote', quoteRequest);
   } catch (error) {
-    console.error('Get transaction quote error:', error);
-    
-    // If API fails, generate a fallback quote using our local logic
-    // This is only for demo purposes and should use real API in production
-    const exchangeRate = getExchangeRate(sourceCurrency, destinationCurrency);
-    const destinationAmount = amount * exchangeRate;
-    const fee = calculateFee(amount);
-    
-    const fallbackQuote: TransactionQuote = {
-      sourceAmount: amount,
-      sourceCurrency,
-      destinationAmount,
-      destinationCurrency,
-      exchangeRate,
-      fee,
-      totalAmount: amount + fee,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min expiry
-    };
-    
-    return fallbackQuote;
-  }
-};
-
-/**
- * Create new transaction
- */
-export const createTransaction = async (
-  data: CreateTransactionData
-): Promise<Transaction> => {
-  try {
-    const newTransaction = await apiService.post<Transaction>('/transactions', data);
-    
-    // Update local cache of recent transactions
-    const cachedTransactions = await getData<Transaction[]>(STORAGE_KEYS.RECENT_TRANSACTIONS) || [];
-    await storeData(STORAGE_KEYS.RECENT_TRANSACTIONS, [newTransaction, ...cachedTransactions].slice(0, 10));
-    
-    return newTransaction;
-  } catch (error) {
-    console.error('Create transaction error:', error);
+    console.error('Failed to create quote:', error);
     throw error;
   }
 };
 
 /**
- * Cancel transaction (only if status is pending)
+ * Create a new transaction
+ */
+export const createTransaction = async (transactionRequest: TransactionRequest): Promise<Transaction> => {
+  try {
+    return await post('/api/transactions', transactionRequest);
+  } catch (error) {
+    console.error('Failed to create transaction:', error);
+    throw error;
+  }
+};
+
+/**
+ * Cancel a transaction
  */
 export const cancelTransaction = async (id: string): Promise<Transaction> => {
   try {
-    const updatedTransaction = await apiService.post<Transaction>(`/transactions/${id}/cancel`);
-    
-    // Update local cache
-    const cachedTransactions = await getData<Transaction[]>(STORAGE_KEYS.RECENT_TRANSACTIONS) || [];
-    const updatedCache = cachedTransactions.map(t => 
-      t.id === id ? updatedTransaction : t
-    );
-    
-    await storeData(STORAGE_KEYS.RECENT_TRANSACTIONS, updatedCache);
-    
-    return updatedTransaction;
+    return await post(`/api/transactions/${id}/cancel`);
   } catch (error) {
-    console.error(`Cancel transaction ${id} error:`, error);
+    console.error(`Failed to cancel transaction ${id}:`, error);
     throw error;
   }
 };
 
 /**
- * Get recent transaction statistics
+ * Get transaction statistics
  */
-export const getTransactionStats = async (): Promise<{
-  totalSent: number;
-  totalCount: number;
-  averageAmount: number;
-}> => {
+export const getTransactionStats = async (): Promise<TransactionStats> => {
   try {
-    return await apiService.get<{
-      totalSent: number;
-      totalCount: number;
-      averageAmount: number;
-    }>('/transactions/stats');
+    return await get('/api/transactions/stats');
   } catch (error) {
-    console.error('Get transaction stats error:', error);
-    
-    // If API fails, generate stats from cached transactions
-    const cachedTransactions = await getData<Transaction[]>(STORAGE_KEYS.RECENT_TRANSACTIONS) || [];
-    
-    const totalSent = cachedTransactions.reduce((sum, t) => sum + t.sourceAmount + t.fee, 0);
-    const totalCount = cachedTransactions.length;
-    const averageAmount = totalCount > 0 ? totalSent / totalCount : 0;
-    
-    return { totalSent, totalCount, averageAmount };
+    console.error('Failed to get transaction stats:', error);
+    throw error;
   }
 };
 
-export const transactionService = {
+export default {
   getTransactions,
   getTransaction,
-  getTransactionQuote,
+  createQuote,
   createTransaction,
   cancelTransaction,
   getTransactionStats,
 };
-
-export default transactionService;

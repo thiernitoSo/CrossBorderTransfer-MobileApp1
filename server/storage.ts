@@ -48,7 +48,7 @@ export interface Transaction {
   fee: number;
   beneficiaryId: string;
   beneficiaryName: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
   statusMessage?: string;
   paymentMethod: string;
   provider?: string;

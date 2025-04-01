@@ -1,111 +1,55 @@
 import React from 'react';
-import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import { Text, Card, IconButton } from 'react-native-paper';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text } from 'react-native-paper';
+import { Feather } from '@expo/vector-icons';
 import theme from '../../constants/theme';
 
 interface ErrorMessageProps {
   message: string;
-  onDismiss?: () => void;
-  style?: StyleProp<ViewStyle>;
-  type?: 'error' | 'warning' | 'info';
+  onDismiss: () => void;
 }
 
-const ErrorMessage: React.FC<ErrorMessageProps> = ({
-  message,
-  onDismiss,
-  style,
-  type = 'error',
-}) => {
-  if (!message) return null;
-
-  // Get the appropriate color and icon based on the type
-  const getTypeStyles = () => {
-    switch (type) {
-      case 'warning':
-        return {
-          backgroundColor: theme.colors.warning + '20', // 20% opacity
-          borderColor: theme.colors.warning,
-          textColor: theme.colors.warning,
-          icon: 'alert-circle',
-        };
-      case 'info':
-        return {
-          backgroundColor: theme.colors.info + '20',
-          borderColor: theme.colors.info,
-          textColor: theme.colors.info,
-          icon: 'information',
-        };
-      case 'error':
-      default:
-        return {
-          backgroundColor: theme.colors.error + '20',
-          borderColor: theme.colors.error,
-          textColor: theme.colors.error,
-          icon: 'alert',
-        };
-    }
-  };
-
-  const typeStyles = getTypeStyles();
-
+const ErrorMessage: React.FC<ErrorMessageProps> = ({ message, onDismiss }) => {
   return (
-    <Card
-      style={[
-        styles.container,
-        {
-          backgroundColor: typeStyles.backgroundColor,
-          borderColor: typeStyles.borderColor,
-        },
-        style,
-      ]}
-    >
-      <View style={styles.content}>
-        <IconButton
-          icon={typeStyles.icon}
-          size={24}
-          color={typeStyles.textColor}
-          style={styles.icon}
-        />
-        <Text style={[styles.message, { color: typeStyles.textColor }]}>
-          {message}
-        </Text>
-        {onDismiss && (
-          <IconButton
-            icon="close"
-            size={20}
-            color={typeStyles.textColor}
-            onPress={onDismiss}
-            style={styles.closeButton}
-          />
-        )}
+    <View style={styles.container}>
+      <View style={styles.contentContainer}>
+        <Feather name="alert-circle" size={20} color={theme.colors.error} style={styles.icon} />
+        <Text style={styles.message}>{message}</Text>
       </View>
-    </Card>
+      <TouchableOpacity onPress={onDismiss} style={styles.closeButton}>
+        <Feather name="x" size={18} color={theme.colors.text} />
+      </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: theme.colors.error + '15', // 15% opacity
     borderLeftWidth: 4,
-    marginVertical: theme.spacing.md,
-    elevation: 0,
+    borderLeftColor: theme.colors.error,
+    flexDirection: 'row',
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    borderRadius: theme.roundness.small,
+    padding: theme.spacing.md,
+    alignItems: 'center',
   },
-  content: {
+  contentContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
   },
   icon: {
-    margin: 0,
-    marginRight: theme.spacing.xs,
+    marginRight: theme.spacing.sm,
   },
   message: {
     flex: 1,
+    color: theme.colors.text,
     fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.medium,
   },
   closeButton: {
-    margin: 0,
+    padding: 2,
   },
 });
 

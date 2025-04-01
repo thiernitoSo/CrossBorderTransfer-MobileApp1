@@ -18,8 +18,9 @@ const TabBar: React.FC = () => {
   const tabs: TabItem[] = [
     { label: 'Home', icon: 'home', route: '/(authenticated)/dashboard' },
     { label: 'Send', icon: 'send', route: '/(authenticated)/send-money' },
+    { label: 'Beneficiaries', icon: 'users', route: '/(authenticated)/beneficiaries' },
     { label: 'History', icon: 'clock', route: '/(authenticated)/transactions' },
-    { label: 'Support', icon: 'message-circle', route: '/support' },
+    { label: 'Profile', icon: 'user', route: '/(authenticated)/profile' },
   ];
 
   const handleTabPress = (route: string) => {
@@ -73,10 +74,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: theme.spacing.xs,
+    paddingHorizontal: 2, // Added for more dense tab layout
   },
   tabLabel: {
-    fontSize: theme.fontSizes.xs,
+    fontSize: 10, // Reduced for more dense tab layout
     marginTop: 2,
+    textAlign: 'center',
   },
   activeTabLabel: {
     color: theme.colors.primary,

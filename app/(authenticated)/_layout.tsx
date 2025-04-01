@@ -32,8 +32,16 @@ export default function AuthenticatedLayout() {
         <Stack.Screen name="beneficiaries" />
         <Stack.Screen name="transactions" />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="notifications" />
+        <Stack.Screen name="add-beneficiary" />
+        <Stack.Screen name="edit-beneficiary" />
+        <Stack.Screen name="settings" />
+        <Stack.Screen name="security" />
+        <Stack.Screen name="change-password" />
+        <Stack.Screen name="help" />
+        <Stack.Screen name="terms" />
+        <Stack.Screen name="privacy" />
       </Stack>
-      <TabBar />
     </View>
   );
 }

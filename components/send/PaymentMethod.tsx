@@ -32,6 +32,12 @@ const PaymentMethod: React.FC<PaymentMethodProps> = ({
       icon: 'briefcase',
       description: 'Use your available balance in your SendAfrika wallet',
     },
+    {
+      id: 'orange_money',
+      label: 'Orange Money',
+      icon: 'smartphone',
+      description: 'Send directly to Orange Money mobile wallets in West & Central Africa',
+    },
   ];
 
   return (

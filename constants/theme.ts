@@ -40,6 +40,10 @@ const colors = {
   overlay: 'rgba(0, 0, 0, 0.5)',
   card: '#FFFFFF',
   notification: '#FF4081',
+  
+  // Button states
+  disabledBackground: '#E2E8F0',
+  disabledText: '#94A3B8',
 };
 
 const spacing = {

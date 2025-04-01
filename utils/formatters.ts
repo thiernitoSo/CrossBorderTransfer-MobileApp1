@@ -1,163 +1,157 @@
-import { getCountryByCode } from '../constants/countries';
-
 /**
- * Format currency amount with proper symbol
+ * Format a currency amount with the appropriate currency symbol
+ * 
+ * @param amount Amount to format
+ * @param currencyCode ISO currency code like "CAD", "USD", "NGN", etc.
+ * @param options Formatting options
+ * @returns Formatted currency string
  */
-export const formatCurrency = (
+export function formatCurrency(
   amount: number,
   currencyCode: string,
-  options: Intl.NumberFormatOptions = {}
-): string => {
-  const country = getCountryByCode(
-    Object.entries(currencyCodeToCountryCode).find(
-      ([_, code]) => code === currencyCode
-    )?.[0] || 'CA'
-  );
-
-  const defaultOptions: Intl.NumberFormatOptions = {
-    style: 'currency',
-    currency: currencyCode,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  };
-
+  options: { 
+    minimumFractionDigits?: number;
+    maximumFractionDigits?: number;
+    showCode?: boolean;
+  } = {}
+): string {
+  const { 
+    minimumFractionDigits = 2, 
+    maximumFractionDigits = 2,
+    showCode = false
+  } = options;
+  
   try {
-    return new Intl.NumberFormat('en-CA', {
-      ...defaultOptions,
-      ...options,
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits,
+      maximumFractionDigits,
+      currencyDisplay: showCode ? 'code' : 'symbol',
     }).format(amount);
   } catch (error) {
-    // Fallback formatting if Intl.NumberFormat fails
-    const symbol = country?.currencySymbol || '$';
-    return `${symbol}${amount.toFixed(2)}`;
+    // Fallback in case currency code is not supported
+    return `${currencyCode} ${amount.toFixed(minimumFractionDigits)}`;
   }
-};
+}
 
 /**
- * Format date to readable format
+ * Format a date string in a human-friendly format
+ * 
+ * @param dateString ISO date string to format
+ * @param options Formatting options
+ * @returns Formatted date string
  */
-export const formatDate = (
-  date: Date | string,
-  options: Intl.DateTimeFormatOptions = {}
-): string => {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
+export function formatDate(
+  dateString: string,
+  options: {
+    includeTime?: boolean;
+    format?: 'full' | 'short' | 'relative';
+  } = {}
+): string {
+  const { includeTime = true, format = 'short' } = options;
   
-  const defaultOptions: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'short',
+  const date = new Date(dateString);
+  
+  if (format === 'relative') {
+    return formatRelativeTime(date);
+  }
+  
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    month: format === 'full' ? 'long' : 'short',
     day: 'numeric',
+    year: 'numeric',
   };
-
-  try {
-    return new Intl.DateTimeFormatter('en-CA', {
-      ...defaultOptions,
-      ...options,
-    }).format(dateObj);
-  } catch (error) {
-    // Fallback formatting if Intl.DateTimeFormatter fails
-    return dateObj.toLocaleDateString('en-CA', {
-      ...defaultOptions,
-      ...options,
-    });
-  }
-};
-
-/**
- * Format time to readable format
- */
-export const formatTime = (
-  date: Date | string,
-  options: Intl.DateTimeFormatOptions = {}
-): string => {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
   
-  const defaultOptions: Intl.DateTimeFormatOptions = {
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true,
-  };
-
-  try {
-    return dateObj.toLocaleTimeString('en-CA', {
-      ...defaultOptions,
-      ...options,
-    });
-  } catch (error) {
-    // Fallback if toLocaleTimeString fails
-    const hours = dateObj.getHours();
-    const minutes = dateObj.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const hour12 = hours % 12 || 12;
-    return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+  if (includeTime) {
+    dateOptions.hour = '2-digit';
+    dateOptions.minute = '2-digit';
   }
-};
-
-/**
- * Format complete datetime
- */
-export const formatDateTime = (date: Date | string): string => {
-  return `${formatDate(date)} at ${formatTime(date)}`;
-};
-
-/**
- * Format phone number to international format
- */
-export const formatPhoneNumber = (
-  phoneNumber: string,
-  countryCode = 'CA'
-): string => {
-  // Remove all non-digits
-  const cleaned = phoneNumber.replace(/\D/g, '');
   
-  // Basic formatting based on country code
+  return date.toLocaleDateString('en-US', dateOptions);
+}
+
+/**
+ * Format a date as a relative time (e.g., "2 hours ago")
+ * 
+ * @param date Date to format
+ * @returns Formatted relative time string
+ */
+export function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffSecs < 60) {
+    return 'just now';
+  } else if (diffMins < 60) {
+    return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+  } else if (diffDays < 7) {
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  } else {
+    return formatDate(date.toISOString(), { format: 'short' });
+  }
+}
+
+/**
+ * Format a phone number for display
+ * 
+ * @param phoneNumber Phone number to format
+ * @param countryCode Country code
+ * @returns Formatted phone number
+ */
+export function formatPhoneNumber(phoneNumber: string, countryCode?: string): string {
+  // Implement different phone format based on country
+  if (!phoneNumber) return '';
+  
+  // Remove any non-digit characters
+  const digits = phoneNumber.replace(/\D/g, '');
+  
+  // Different formats for different countries
   if (countryCode === 'CA' || countryCode === 'US') {
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    // Format for North America: (XXX) XXX-XXXX
+    if (digits.length === 10) {
+      return `(${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6)}`;
+    }
+  } else if (countryCode === 'NG') {
+    // Format for Nigeria: 0XXX XXX XXXX
+    if (digits.length === 11 && digits.startsWith('0')) {
+      return `${digits.substring(0, 4)} ${digits.substring(4, 7)} ${digits.substring(7)}`;
     }
   }
   
-  // Return original if no formatting is applied
-  return phoneNumber;
-};
-
-/**
- * Truncate text with ellipsis
- */
-export const truncateText = (text: string, maxLength: number): string => {
-  if (!text || text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength)}...`;
-};
-
-/**
- * Format transaction reference number
- */
-export const formatReference = (reference: string): string => {
-  if (!reference) return '';
-  
-  // Format as TX-XXXXX-XXXXX
-  if (reference.length >= 10) {
-    const formatted = reference.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    return `TX-${formatted.slice(0, 5)}-${formatted.slice(5, 10)}`;
+  // Default formatting: just add spaces every 4 digits
+  if (digits.length >= 8) {
+    return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
   }
   
-  return reference.toUpperCase();
-};
+  return phoneNumber;
+}
 
 /**
- * Helper mapping for currency codes to country codes
+ * Truncate text to a specific length with ellipsis
+ * 
+ * @param text Text to truncate
+ * @param maxLength Maximum length
+ * @returns Truncated text
  */
-const currencyCodeToCountryCode: Record<string, string> = {
-  'CA': 'CAD', // Canada
-  'GH': 'GHS', // Ghana
-  'NG': 'NGN', // Nigeria
-  'KE': 'KES', // Kenya
-  'RW': 'RWF', // Rwanda
-  'SN': 'XOF', // Senegal
-  'CI': 'XOF', // Côte d'Ivoire
-  'CM': 'XAF', // Cameroon
-  'ZA': 'ZAR', // South Africa
-  'TZ': 'TZS', // Tanzania
-  'UG': 'UGX', // Uganda
-  'ET': 'ETB', // Ethiopia
-  'MA': 'MAD', // Morocco
-};
+export function truncateText(text: string, maxLength: number): string {
+  if (!text || text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+}
+
+/**
+ * Format a percentage value
+ * 
+ * @param value Value to format as percentage
+ * @param decimalPlaces Number of decimal places
+ * @returns Formatted percentage string
+ */
+export function formatPercentage(value: number, decimalPlaces: number = 2): string {
+  return `${(value * 100).toFixed(decimalPlaces)}%`;
+}
