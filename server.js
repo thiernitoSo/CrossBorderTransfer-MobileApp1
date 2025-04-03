@@ -309,10 +309,28 @@ async function hashPassword(password) {
 }
 
 async function comparePasswords(supplied, stored) {
-  const [hashed, salt] = stored.split('.');
-  const hashedBuf = Buffer.from(hashed, 'hex');
-  const suppliedBuf = await scryptAsync(supplied, salt, 64);
-  return crypto.timingSafeEqual(hashedBuf, suppliedBuf);
+  try {
+    const [hashed, salt] = stored.split('.');
+    const hashedBuf = Buffer.from(hashed, 'hex');
+    const suppliedBuf = await scryptAsync(supplied, salt, 64);
+    return crypto.timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    console.error('Password comparison error:', error);
+    return false;
+  }
+}
+
+// Admin middleware to check if user is an admin
+function isAdmin(req, res, next) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  
+  next();
 }
 
 // Set up session
@@ -1117,6 +1135,98 @@ if (paymentService) {
     }
   });
 }
+
+// Admin routes
+app.get('/api/admin/users', isAdmin, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const users = await storage.getAllUsers(page, limit);
+    const total = await storage.countUsers();
+    
+    // Remove passwords from response
+    const safeUsers = users.map(user => {
+      const { password, ...userWithoutPassword } = user;
+      return userWithoutPassword;
+    });
+    
+    res.json({
+      users: safeUsers,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Admin get users error:', error);
+    res.status(500).json({ message: 'Failed to get users' });
+  }
+});
+
+app.get('/api/admin/beneficiaries', isAdmin, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const beneficiaries = await storage.getAllBeneficiaries(page, limit);
+    const total = await storage.countBeneficiaries();
+    
+    res.json({
+      beneficiaries,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Admin get beneficiaries error:', error);
+    res.status(500).json({ message: 'Failed to get beneficiaries' });
+  }
+});
+
+app.get('/api/admin/transactions', isAdmin, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const status = req.query.status;
+    const country = req.query.country;
+    
+    const filters = {};
+    if (status) filters.status = status;
+    if (country) filters.country = country;
+    
+    const transactions = await storage.getAllTransactions(page, limit, filters);
+    const total = await storage.countAllTransactions(filters);
+    
+    res.json({
+      transactions,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Admin get transactions error:', error);
+    res.status(500).json({ message: 'Failed to get transactions' });
+  }
+});
+
+app.get('/api/admin/statistics', isAdmin, async (req, res) => {
+  try {
+    const statistics = await storage.getTransactionStatistics();
+    res.json(statistics);
+  } catch (error) {
+    console.error('Admin get statistics error:', error);
+    res.status(500).json({ message: 'Failed to get statistics' });
+  }
+});
 
 // OpenAI-powered AI features
 if (openaiService) {

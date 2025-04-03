@@ -41,6 +41,7 @@ export default function AuthenticatedLayout() {
         <Stack.Screen name="help" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="privacy" />
+        <Stack.Screen name="admin" />
       </Stack>
     </View>
   );

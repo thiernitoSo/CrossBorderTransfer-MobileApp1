@@ -18,6 +18,7 @@ export interface User {
   city?: string;
   province?: string;
   postalCode?: string;
+  role?: 'user' | 'admin';
 }
 
 export interface Beneficiary {
@@ -74,6 +75,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | null>;
   updateUser(id: string, userData: Partial<User>): Promise<User>;
   deleteUser(id: string): Promise<void>;
+  getAllUsers(page: number, limit: number): Promise<User[]>;
+  countUsers(): Promise<number>;
   
   // Beneficiary methods
   createBeneficiary(data: Partial<Beneficiary>): Promise<Beneficiary>;
@@ -81,6 +84,8 @@ export interface IStorage {
   updateBeneficiary(id: string, data: Partial<Beneficiary>): Promise<Beneficiary>;
   deleteBeneficiary(id: string): Promise<void>;
   getBeneficiariesByUserId(userId: string): Promise<Beneficiary[]>;
+  getAllBeneficiaries(page: number, limit: number): Promise<Beneficiary[]>;
+  countBeneficiaries(): Promise<number>;
   
   // Transaction methods
   createTransaction(data: Partial<Transaction>): Promise<Transaction>;
@@ -88,11 +93,29 @@ export interface IStorage {
   updateTransaction(id: string, data: Partial<Transaction>): Promise<Transaction>;
   getTransactionsByUserId(userId: string, page: number, limit: number): Promise<Transaction[]>;
   countTransactionsByUserId(userId: string): Promise<number>;
+  getAllTransactions(page: number, limit: number, filters?: { status?: string, country?: string }): Promise<Transaction[]>;
+  countAllTransactions(filters?: { status?: string, country?: string }): Promise<number>;
+  getTransactionStatistics(): Promise<TransactionStatistics>;
   
   // Password reset methods
   storeResetToken(userId: string, token: string): Promise<void>;
   getUserIdByResetToken(token: string): Promise<string | null>;
   deleteResetToken(token: string): Promise<void>;
+}
+
+export interface TransactionStatistics {
+  totalCount: number;
+  completedCount: number;
+  pendingCount: number;
+  failedCount: number;
+  cancelledCount: number;
+  processingCount: number;
+  totalAmountCAD: number;
+  currencyDistribution: Record<string, { count: number, amount: number }>;
+  countryDistribution: Record<string, number>;
+  last24Hours: number;
+  last7Days: number;
+  last30Days: number;
 }
 
 // In-memory storage implementation
@@ -114,7 +137,7 @@ class MemStorage implements IStorage {
   }
   
   private seedTestData() {
-    // Add test user
+    // Add regular test user
     this.users.push({
       id: '1',
       firstName: 'John',
@@ -129,6 +152,25 @@ class MemStorage implements IStorage {
       city: 'Toronto',
       province: 'ON',
       postalCode: 'M5V 2N4',
+      role: 'user',
+    });
+    
+    // Add admin user
+    this.users.push({
+      id: '2',
+      firstName: 'Admin',
+      lastName: 'User',
+      email: 'admin@sendafrika.com',
+      // Password: 'admin123'
+      password: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9.7ea369caadb5e3.',
+      phoneNumber: '+14165559876',
+      isVerified: true,
+      createdAt: new Date().toISOString(),
+      address: '456 King St',
+      city: 'Toronto',
+      province: 'ON',
+      postalCode: 'M5V 1K4',
+      role: 'admin',
     });
     
     // Add test beneficiaries
@@ -375,6 +417,172 @@ class MemStorage implements IStorage {
   
   async countTransactionsByUserId(userId: string): Promise<number> {
     return this.transactions.filter(t => t.userId === userId).length;
+  }
+  
+  // Admin methods for user management
+  async getAllUsers(page: number, limit: number): Promise<User[]> {
+    // Sort by creation date, newest first
+    const sortedUsers = [...this.users].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    
+    // Apply pagination
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    
+    return sortedUsers.slice(start, end);
+  }
+  
+  async countUsers(): Promise<number> {
+    return this.users.length;
+  }
+  
+  // Admin methods for beneficiary management
+  async getAllBeneficiaries(page: number, limit: number): Promise<Beneficiary[]> {
+    // Sort by creation date, newest first
+    const sortedBeneficiaries = [...this.beneficiaries].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    
+    // Apply pagination
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    
+    return sortedBeneficiaries.slice(start, end);
+  }
+  
+  async countBeneficiaries(): Promise<number> {
+    return this.beneficiaries.length;
+  }
+  
+  // Admin methods for transaction management
+  async getAllTransactions(page: number, limit: number, filters?: { status?: string, country?: string }): Promise<Transaction[]> {
+    let filteredTransactions = [...this.transactions];
+    
+    // Apply filters if provided
+    if (filters) {
+      if (filters.status) {
+        filteredTransactions = filteredTransactions.filter(t => t.status === filters.status);
+      }
+      
+      if (filters.country) {
+        // For country filter, we need to find all beneficiaries from that country
+        const beneficiaryIds = this.beneficiaries
+          .filter(b => b.country === filters.country)
+          .map(b => b.id);
+        
+        filteredTransactions = filteredTransactions.filter(t => beneficiaryIds.includes(t.beneficiaryId));
+      }
+    }
+    
+    // Sort by creation date, newest first
+    filteredTransactions.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    
+    // Apply pagination
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    
+    return filteredTransactions.slice(start, end);
+  }
+  
+  async countAllTransactions(filters?: { status?: string, country?: string }): Promise<number> {
+    if (!filters) {
+      return this.transactions.length;
+    }
+    
+    let count = this.transactions.length;
+    
+    if (filters.status) {
+      count = this.transactions.filter(t => t.status === filters.status).length;
+    }
+    
+    if (filters.country) {
+      // For country filter, we need to find all beneficiaries from that country
+      const beneficiaryIds = this.beneficiaries
+        .filter(b => b.country === filters.country)
+        .map(b => b.id);
+      
+      count = this.transactions.filter(t => beneficiaryIds.includes(t.beneficiaryId)).length;
+    }
+    
+    return count;
+  }
+  
+  async getTransactionStatistics(): Promise<TransactionStatistics> {
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    // Transaction counts by status
+    const totalCount = this.transactions.length;
+    const completedCount = this.transactions.filter(t => t.status === 'completed').length;
+    const pendingCount = this.transactions.filter(t => t.status === 'pending').length;
+    const failedCount = this.transactions.filter(t => t.status === 'failed').length;
+    const cancelledCount = this.transactions.filter(t => t.status === 'cancelled').length;
+    const processingCount = this.transactions.filter(t => t.status === 'processing').length;
+    
+    // Total amount in CAD
+    const totalAmountCAD = this.transactions.reduce((sum, t) => {
+      if (t.sourceCurrency === 'CAD') {
+        return sum + t.sourceAmount;
+      }
+      return sum;
+    }, 0);
+    
+    // Currency distribution
+    const currencyDistribution: Record<string, { count: number, amount: number }> = {};
+    this.transactions.forEach(t => {
+      const currency = t.destinationCurrency;
+      if (!currencyDistribution[currency]) {
+        currencyDistribution[currency] = { count: 0, amount: 0 };
+      }
+      currencyDistribution[currency].count += 1;
+      currencyDistribution[currency].amount += t.destinationAmount;
+    });
+    
+    // Country distribution - we need to map beneficiaries to countries
+    const countryDistribution: Record<string, number> = {};
+    this.transactions.forEach(t => {
+      const beneficiary = this.beneficiaries.find(b => b.id === t.beneficiaryId);
+      if (beneficiary) {
+        const country = beneficiary.country;
+        if (!countryDistribution[country]) {
+          countryDistribution[country] = 0;
+        }
+        countryDistribution[country] += 1;
+      }
+    });
+    
+    // Transactions by time period
+    const last24Hours = this.transactions.filter(t => 
+      new Date(t.createdAt) >= oneDayAgo
+    ).length;
+    
+    const last7Days = this.transactions.filter(t => 
+      new Date(t.createdAt) >= sevenDaysAgo
+    ).length;
+    
+    const last30Days = this.transactions.filter(t => 
+      new Date(t.createdAt) >= thirtyDaysAgo
+    ).length;
+    
+    return {
+      totalCount,
+      completedCount,
+      pendingCount,
+      failedCount,
+      cancelledCount,
+      processingCount,
+      totalAmountCAD,
+      currencyDistribution,
+      countryDistribution,
+      last24Hours,
+      last7Days,
+      last30Days
+    };
   }
   
   // Password reset methods

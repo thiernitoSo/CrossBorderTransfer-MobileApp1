@@ -1,5 +1,5 @@
 import apiService from './api';
-import { saveSecureValue, deleteSecureValue, SECURE_STORAGE_KEYS, storeData, removeData, STORAGE_KEYS } from '../utils/storage';
+import { saveSecureValue, deleteSecureValue, SECURE_STORAGE_KEYS, storeData, removeData, STORAGE_KEYS, getSecureValue } from '../utils/storage';
 
 export interface User {
   id: string;
@@ -9,6 +9,7 @@ export interface User {
   phoneNumber: string;
   isVerified: boolean;
   createdAt: string;
+  role?: 'user' | 'admin';
 }
 
 export interface LoginCredentials {
@@ -179,7 +180,7 @@ export const changePassword = async (
  */
 export const isAuthenticated = async (): Promise<boolean> => {
   try {
-    const token = await SecureStore.getItemAsync(SECURE_STORAGE_KEYS.ACCESS_TOKEN);
+    const token = await getSecureValue(SECURE_STORAGE_KEYS.ACCESS_TOKEN);
     return !!token;
   } catch (error) {
     console.error('Auth check error:', error);

@@ -384,6 +384,18 @@ export default function Profile() {
                       <Feather name="chevron-right" size={20} color={theme.colors.textLight} />
                     </TouchableOpacity>
                     
+                    {/* Admin Dashboard link (only shown for admin users) */}
+                    {user?.role === 'admin' && (
+                      <TouchableOpacity
+                        style={styles.securityOption}
+                        onPress={() => router.push('/(authenticated)/admin')}
+                      >
+                        <Feather name="shield" size={20} color={theme.colors.primary} />
+                        <Text style={styles.securityText}>Admin Dashboard</Text>
+                        <Feather name="chevron-right" size={20} color={theme.colors.textLight} />
+                      </TouchableOpacity>
+                    )}
+                    
                     <TouchableOpacity
                       style={styles.logoutButton}
                       onPress={handleLogout}
