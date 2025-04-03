@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SendAfrika Country Tips Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2 {
+            color: #0066cc;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .country-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        .country-button {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .country-button:hover {
+            background-color: #e0e0e0;
+        }
+        .country-button.active {
+            background-color: #0066cc;
+            color: white;
+            border-color: #0052a3;
+        }
+        .tips-container {
+            margin-top: 20px;
+        }
+        .tip-card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #f9f9f9;
+        }
+        .tip-title {
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 8px;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+        .flag {
+            font-size: 1.5em;
+        }
+        .error-message {
+            color: #cc0000;
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #ffeeee;
+            border-radius: 5px;
+            border: 1px solid #ffcccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>SendAfrika Country Tips</h1>
+    
+    <div class="container">
+        <h2>Select a Country</h2>
+        
+        <div class="country-selector" id="countrySelector">
+            <!-- Country buttons will be added here -->
+        </div>
+        
+        <div class="tips-container" id="tipsContainer">
+            <div class="loading">Select a country to see tips</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const countrySelector = document.getElementById('countrySelector');
+            const tipsContainer = document.getElementById('tipsContainer');
+            
+            // Sample countries with flags (emoji)
+            const countries = [
+                { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
+                { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
+                { code: 'GH', name: 'Ghana', flag: '🇬🇭' },
+                { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
+                { code: 'UG', name: 'Uganda', flag: '🇺🇬' },
+                { code: 'TZ', name: 'Tanzania', flag: '🇹🇿' },
+                { code: 'SN', name: 'Senegal', flag: '🇸🇳' },
+                { code: 'CI', name: 'Côte d\'Ivoire', flag: '🇨🇮' },
+                { code: 'CM', name: 'Cameroon', flag: '🇨🇲' }
+            ];
+            
+            // Create country buttons
+            countries.forEach(country => {
+                const button = document.createElement('button');
+                button.className = 'country-button';
+                button.dataset.code = country.code;
+                
+                const flag = document.createElement('span');
+                flag.className = 'flag';
+                flag.textContent = country.flag;
+                
+                const name = document.createTextNode(country.name);
+                
+                button.appendChild(flag);
+                button.appendChild(name);
+                
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    document.querySelectorAll('.country-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    
+                    // Fetch tips for selected country
+                    fetchCountryTips(country.code);
+                });
+                
+                countrySelector.appendChild(button);
+            });
+            
+            function fetchCountryTips(countryCode) {
+                // Show loading indicator
+                tipsContainer.innerHTML = '<div class="loading">Loading tips for selected country...</div>';
+                
+                // Fetch tips from API
+                fetch(`/api/ai/country-tips/${countryCode}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        displayTips(data);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        tipsContainer.innerHTML = `
+                            <div class="error-message">
+                                Sorry, we couldn't load tips for this country at the moment. 
+                                Please try again later.
+                            </div>
+                        `;
+                    });
+            }
+            
+            function displayTips(data) {
+                // Clear container
+                tipsContainer.innerHTML = '';
+                
+                // Check if we have tips data in the expected format
+                const tips = data.tips || [];
+                
+                if (tips.length === 0) {
+                    tipsContainer.innerHTML = '<div class="loading">No tips available for this country yet.</div>';
+                    return;
+                }
+                
+                // Display each tip
+                tips.forEach(tip => {
+                    const tipCard = document.createElement('div');
+                    tipCard.className = 'tip-card';
+                    
+                    const tipTitle = document.createElement('div');
+                    tipTitle.className = 'tip-title';
+                    tipTitle.textContent = tip.title;
+                    
+                    const tipDescription = document.createElement('div');
+                    tipDescription.className = 'tip-description';
+                    tipDescription.textContent = tip.description;
+                    
+                    tipCard.appendChild(tipTitle);
+                    tipCard.appendChild(tipDescription);
+                    
+                    tipsContainer.appendChild(tipCard);
+                });
+                
+                // If this is fallback data, show a note
+                if (data.fallback) {
+                    const fallbackNote = document.createElement('div');
+                    fallbackNote.style.fontStyle = 'italic';
+                    fallbackNote.style.textAlign = 'center';
+                    fallbackNote.style.marginTop = '20px';
+                    fallbackNote.style.color = '#666';
+                    fallbackNote.textContent = data.note || 'Note: These are general tips. Specific conditions may vary.';
+                    
+                    tipsContainer.appendChild(fallbackNote);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

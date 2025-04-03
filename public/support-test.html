@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SendAfrika AI Support Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #0066cc;
+            text-align: center;
+        }
+        .chat-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .chat-messages {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #e6f2ff;
+            text-align: right;
+            margin-left: 20%;
+        }
+        .bot-message {
+            background-color: #f0f0f0;
+            margin-right: 20%;
+        }
+        .chat-input {
+            display: flex;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px 0 0 5px;
+        }
+        .chat-input button {
+            padding: 10px 15px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        .feature-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .feature-button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .feature-button:hover {
+            background-color: #0052a3;
+        }
+    </style>
+</head>
+<body>
+    <h1>SendAfrika AI Support Test</h1>
+    
+    <div class="chat-container">
+        <div class="feature-buttons">
+            <button class="feature-button" data-message="What are your fees for sending money to Nigeria?">Fees to Nigeria</button>
+            <button class="feature-button" data-message="How long does it take to send money to Kenya?">Transfer time to Kenya</button>
+            <button class="feature-button" data-message="What payment methods do you support?">Payment methods</button>
+            <button class="feature-button" data-message="Tell me about exchange rates for Ghana">Ghana exchange rates</button>
+            <button class="feature-button" data-message="How do I add a new beneficiary?">Add beneficiary</button>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot-message">
+                Hello! I'm Rafiki, your SendAfrika assistant. How can I help you today?
+            </div>
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="Type your question here...">
+            <button id="sendButton">Send</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chatMessages');
+            const userInput = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendButton');
+            const featureButtons = document.querySelectorAll('.feature-button');
+            
+            // Add sample message functionality
+            featureButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const message = this.getAttribute('data-message');
+                    userInput.value = message;
+                    sendMessage();
+                });
+            });
+            
+            // Send message when send button is clicked
+            sendButton.addEventListener('click', sendMessage);
+            
+            // Send message when Enter key is pressed
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            function sendMessage() {
+                const userMessage = userInput.value.trim();
+                if (userMessage === '') return;
+                
+                // Add user message to chat
+                appendMessage(userMessage, 'user-message');
+                userInput.value = '';
+                
+                // Add loading indicator
+                const loadingElement = document.createElement('div');
+                loadingElement.className = 'message loading';
+                loadingElement.textContent = 'Rafiki is typing...';
+                chatMessages.appendChild(loadingElement);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // Call API
+                fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: userMessage }),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Remove loading indicator
+                    chatMessages.removeChild(loadingElement);
+                    
+                    // Add bot response to chat
+                    appendMessage(data.message, 'bot-message');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Remove loading indicator
+                    chatMessages.removeChild(loadingElement);
+                    
+                    // Add error message
+                    appendMessage(
+                        "I'm sorry, I'm having trouble connecting to my knowledge base. Please try again later or contact support at support@sendafrika.com.", 
+                        'bot-message'
+                    );
+                });
+            }
+            
+            function appendMessage(text, className) {
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${className}`;
+                messageElement.textContent = text;
+                chatMessages.appendChild(messageElement);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>

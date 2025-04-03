@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SendAfrika Transaction Analysis Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2 {
+            color: #0066cc;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0052a3;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+        .analysis-result {
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .result-section {
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #0066cc;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #0066cc;
+        }
+        .error-message {
+            color: #cc0000;
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #ffeeee;
+            border-radius: 5px;
+            border: 1px solid #ffcccc;
+        }
+        .sample-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .sample-button {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            color: #333;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .sample-button:hover {
+            background-color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <h1>SendAfrika Transaction Analysis Test</h1>
+    
+    <div class="container">
+        <h2>Enter Transaction Details</h2>
+        
+        <div class="sample-buttons">
+            <button class="sample-button" id="sampleNigeria">Sample Nigeria Transfer</button>
+            <button class="sample-button" id="sampleKenya">Sample Kenya Transfer</button>
+            <button class="sample-button" id="sampleGhana">Sample Ghana Transfer</button>
+        </div>
+        
+        <form id="transactionForm">
+            <div class="form-group">
+                <label for="sourceAmount">Amount Sent (CAD)</label>
+                <input type="number" id="sourceAmount" name="sourceAmount" min="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="sourceCurrency">Source Currency</label>
+                <select id="sourceCurrency" name="sourceCurrency" required>
+                    <option value="CAD">Canadian Dollar (CAD)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="destinationAmount">Amount Received</label>
+                <input type="number" id="destinationAmount" name="destinationAmount" min="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="destinationCurrency">Destination Currency</label>
+                <select id="destinationCurrency" name="destinationCurrency" required>
+                    <option value="NGN">Nigerian Naira (NGN)</option>
+                    <option value="KES">Kenyan Shilling (KES)</option>
+                    <option value="GHS">Ghanaian Cedi (GHS)</option>
+                    <option value="UGX">Ugandan Shilling (UGX)</option>
+                    <option value="TZS">Tanzanian Shilling (TZS)</option>
+                    <option value="ZAR">South African Rand (ZAR)</option>
+                    <option value="XOF">West African CFA franc (XOF)</option>
+                    <option value="XAF">Central African CFA franc (XAF)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="exchangeRate">Exchange Rate</label>
+                <input type="number" id="exchangeRate" name="exchangeRate" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="fee">Fee (CAD)</label>
+                <input type="number" id="fee" name="fee" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="recipientCountry">Recipient Country</label>
+                <select id="recipientCountry" name="recipientCountry" required>
+                    <option value="Nigeria">Nigeria</option>
+                    <option value="Kenya">Kenya</option>
+                    <option value="Ghana">Ghana</option>
+                    <option value="Uganda">Uganda</option>
+                    <option value="Tanzania">Tanzania</option>
+                    <option value="South Africa">South Africa</option>
+                    <option value="Senegal">Senegal</option>
+                    <option value="Côte d'Ivoire">Côte d'Ivoire</option>
+                    <option value="Cameroon">Cameroon</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="paymentMethod">Payment Method</label>
+                <select id="paymentMethod" name="paymentMethod" required>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="mobile_money">Mobile Money</option>
+                    <option value="cash_pickup">Cash Pickup</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select id="status" name="status" required>
+                    <option value="completed">Completed</option>
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                </select>
+            </div>
+            
+            <button type="submit">Analyze Transaction</button>
+        </form>
+        
+        <div id="analysisResult" class="analysis-result" style="display: none;">
+            <h2>Analysis Results</h2>
+            <div id="analysisContent"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('transactionForm');
+            const analysisResult = document.getElementById('analysisResult');
+            const analysisContent = document.getElementById('analysisContent');
+            
+            // Sample transaction data
+            const sampleTransactions = {
+                nigeria: {
+                    sourceAmount: 500,
+                    sourceCurrency: 'CAD',
+                    destinationAmount: 381250,
+                    destinationCurrency: 'NGN',
+                    exchangeRate: 762.5,
+                    fee: 17.5,
+                    recipientCountry: 'Nigeria',
+                    paymentMethod: 'mobile_money',
+                    status: 'completed'
+                },
+                kenya: {
+                    sourceAmount: 300,
+                    sourceCurrency: 'CAD',
+                    destinationAmount: 31500,
+                    destinationCurrency: 'KES',
+                    exchangeRate: 105,
+                    fee: 10.5,
+                    recipientCountry: 'Kenya',
+                    paymentMethod: 'bank_transfer',
+                    status: 'completed'
+                },
+                ghana: {
+                    sourceAmount: 250,
+                    sourceCurrency: 'CAD',
+                    destinationAmount: 2175,
+                    destinationCurrency: 'GHS',
+                    exchangeRate: 8.7,
+                    fee: 8.75,
+                    recipientCountry: 'Ghana',
+                    paymentMethod: 'cash_pickup',
+                    status: 'processing'
+                }
+            };
+            
+            // Add sample button event listeners
+            document.getElementById('sampleNigeria').addEventListener('click', function() {
+                populateFormWithSample(sampleTransactions.nigeria);
+            });
+            
+            document.getElementById('sampleKenya').addEventListener('click', function() {
+                populateFormWithSample(sampleTransactions.kenya);
+            });
+            
+            document.getElementById('sampleGhana').addEventListener('click', function() {
+                populateFormWithSample(sampleTransactions.ghana);
+            });
+            
+            // Function to populate form with sample data
+            function populateFormWithSample(data) {
+                for (const [key, value] of Object.entries(data)) {
+                    if (document.getElementById(key)) {
+                        document.getElementById(key).value = value;
+                    }
+                }
+            }
+            
+            // Calculate exchange rate when source or destination amount changes
+            document.getElementById('sourceAmount').addEventListener('input', updateExchangeRate);
+            document.getElementById('destinationAmount').addEventListener('input', updateExchangeRate);
+            
+            function updateExchangeRate() {
+                const sourceAmount = parseFloat(document.getElementById('sourceAmount').value);
+                const destinationAmount = parseFloat(document.getElementById('destinationAmount').value);
+                
+                if (sourceAmount > 0 && destinationAmount > 0) {
+                    const exchangeRate = destinationAmount / sourceAmount;
+                    document.getElementById('exchangeRate').value = exchangeRate.toFixed(2);
+                }
+            }
+            
+            // Form submission
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show loading state
+                analysisResult.style.display = 'block';
+                analysisContent.innerHTML = '<div class="loading">Analyzing transaction...</div>';
+                
+                // Get form data
+                const formData = new FormData(form);
+                const transaction = Object.fromEntries(formData.entries());
+                
+                // Convert numeric fields to numbers
+                ['sourceAmount', 'destinationAmount', 'exchangeRate', 'fee'].forEach(field => {
+                    transaction[field] = parseFloat(transaction[field]);
+                });
+                
+                // Call API
+                fetch('/api/analyze-transaction', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ transaction }),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    displayAnalysisResults(data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    analysisContent.innerHTML = `
+                        <div class="error-message">
+                            Sorry, we couldn't analyze this transaction at the moment. 
+                            Please try again later.
+                        </div>
+                    `;
+                });
+            });
+            
+            function displayAnalysisResults(data) {
+                // Clear previous results
+                analysisContent.innerHTML = '';
+                
+                // Create sections for each type of analysis
+                const sections = [
+                    { key: 'exchangeRateAssessment', title: 'Exchange Rate Assessment' },
+                    { key: 'feeSavingTips', title: 'Fee Saving Opportunities' },
+                    { key: 'marketInsights', title: 'Market Insights' },
+                    { key: 'estimatedDeliveryTime', title: 'Estimated Delivery Time' },
+                    { key: 'securityTips', title: 'Security Considerations' }
+                ];
+                
+                sections.forEach(section => {
+                    if (data[section.key]) {
+                        const sectionElement = document.createElement('div');
+                        sectionElement.className = 'result-section';
+                        
+                        const titleElement = document.createElement('div');
+                        titleElement.className = 'section-title';
+                        titleElement.textContent = section.title;
+                        
+                        const contentElement = document.createElement('div');
+                        contentElement.textContent = data[section.key];
+                        
+                        sectionElement.appendChild(titleElement);
+                        sectionElement.appendChild(contentElement);
+                        
+                        analysisContent.appendChild(sectionElement);
+                    }
+                });
+                
+                // If no data was returned
+                if (analysisContent.children.length === 0) {
+                    analysisContent.innerHTML = `
+                        <div class="error-message">
+                            No analysis data available for this transaction.
+                        </div>
+                    `;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
