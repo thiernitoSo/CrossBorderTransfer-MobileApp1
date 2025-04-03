@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Recipient - SendAfrika</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Add Beneficiary specific styles */
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .form-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 30px;
+        }
+        
+        .form-card h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: var(--text-color);
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+        }
+        
+        .form-group select {
+            background-color: white;
+        }
+        
+        .payment-method-details {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        
+        .form-note {
+            background-color: var(--background-light);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--text-light);
+        }
+        
+        .form-note p {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo">
+                <img src="https://i.imgur.com/3yFJNt5.png" alt="SendAfrika Logo">
+            </div>
+            <ul class="nav-links">
+                <li><a href="dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="send-money.html"><i class="fas fa-paper-plane"></i> Send Money</a></li>
+                <li class="active"><a href="beneficiaries.html"><i class="fas fa-users"></i> Recipients</a></li>
+                <li><a href="transactions.html"><i class="fas fa-history"></i> Transactions</a></li>
+                <li><a href="support.html"><i class="fas fa-headset"></i> Support</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="#" id="logout-button"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1>Add Recipient</h1>
+                <div class="user-profile">
+                    <div class="user-avatar" id="user-initial"></div>
+                    <div class="user-name" id="user-name">...</div>
+                </div>
+            </header>
+
+            <section class="content-section">
+                <div class="breadcrumbs">
+                    <a href="dashboard.html">Dashboard</a>
+                    <i class="fas fa-chevron-right"></i>
+                    <a href="beneficiaries.html">Recipients</a>
+                    <i class="fas fa-chevron-right"></i>
+                    <span>Add Recipient</span>
+                </div>
+                
+                <div class="form-container">
+                    <form id="add-beneficiary-form" class="form-card">
+                        <h2>Recipient Information</h2>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="firstName">First Name *</label>
+                                <input type="text" id="firstName" name="firstName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="lastName">Last Name *</label>
+                                <input type="text" id="lastName" name="lastName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="country">Country *</label>
+                                <select id="country" name="country" required>
+                                    <option value="">Select a country</option>
+                                    <option value="GH">Ghana 🇬🇭</option>
+                                    <option value="NG">Nigeria 🇳🇬</option>
+                                    <option value="KE">Kenya 🇰🇪</option>
+                                    <option value="RW">Rwanda 🇷🇼</option>
+                                    <option value="SN">Senegal 🇸🇳</option>
+                                    <option value="CI">Côte d'Ivoire 🇨🇮</option>
+                                    <option value="CM">Cameroon 🇨🇲</option>
+                                    <option value="ZA">South Africa 🇿🇦</option>
+                                    <option value="TZ">Tanzania 🇹🇿</option>
+                                    <option value="UG">Uganda 🇺🇬</option>
+                                    <option value="ET">Ethiopia 🇪🇹</option>
+                                    <option value="MA">Morocco 🇲🇦</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="phoneNumber">Phone Number *</label>
+                                <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="Include country code" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="relationship">Relationship *</label>
+                                <select id="relationship" name="relationship" required>
+                                    <option value="">Select relationship</option>
+                                    <option value="family">Family</option>
+                                    <option value="friend">Friend</option>
+                                    <option value="business">Business</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="paymentMethod">Payment Method *</label>
+                                <select id="paymentMethod" name="paymentMethod" required>
+                                    <option value="">Select payment method</option>
+                                    <option value="bank">Bank Transfer</option>
+                                    <option value="mobile_money">Mobile Money</option>
+                                    <option value="cash_pickup">Cash Pickup</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Bank Transfer Details (initially hidden) -->
+                        <div class="payment-method-details" id="bank-details" style="display: none;">
+                            <h3>Bank Account Details</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="bankName">Bank Name *</label>
+                                    <input type="text" id="bankName" name="bankName">
+                                </div>
+                                <div class="form-group">
+                                    <label for="accountNumber">Account Number *</label>
+                                    <input type="text" id="accountNumber" name="accountNumber">
+                                </div>
+                                <div class="form-group">
+                                    <label for="branchCode">Branch/Sort Code</label>
+                                    <input type="text" id="branchCode" name="branchCode">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mobile Money Details (initially hidden) -->
+                        <div class="payment-method-details" id="mobile-money-details" style="display: none;">
+                            <h3>Mobile Money Details</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="mobileMoneyProvider">Provider *</label>
+                                    <select id="mobileMoneyProvider" name="mobileMoneyProvider">
+                                        <option value="">Select a provider</option>
+                                        <!-- These will be populated by JavaScript based on country -->
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mobileMoneyNumber">Mobile Money Number *</label>
+                                    <input type="text" id="mobileMoneyNumber" name="mobileMoneyNumber" placeholder="Same as phone number in most cases">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-note">
+                            <p><strong>Note:</strong> All recipient information must match their ID documents to comply with international money transfer regulations.</p>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <a href="beneficiaries.html" class="btn-secondary">Cancel</a>
+                            <button type="submit" class="btn-primary">Save Recipient</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const paymentMethodSelect = document.getElementById('paymentMethod');
+            const bankDetails = document.getElementById('bank-details');
+            const mobileMoneyDetails = document.getElementById('mobile-money-details');
+            const countrySelect = document.getElementById('country');
+            const mobileMoneyProviderSelect = document.getElementById('mobileMoneyProvider');
+            const addBeneficiaryForm = document.getElementById('add-beneficiary-form');
+            const userNameElement = document.getElementById('user-name');
+            const userInitialElement = document.getElementById('user-initial');
+            
+            // Set user information from local storage
+            const setUserInfo = () => {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (user && user.firstName) {
+                    userNameElement.textContent = `${user.firstName} ${user.lastName || ''}`;
+                    userInitialElement.textContent = user.firstName.charAt(0);
+                }
+            };
+            
+            // Payment method mobile money providers by country
+            const mobileMoneyProviders = {
+                'GH': ['MTN Mobile Money', 'Vodafone Cash', 'AirtelTigo Money'],
+                'NG': ['MTN Mobile Money', 'Airtel Money', '9Mobile', 'Glo Mobile Money'],
+                'KE': ['M-Pesa', 'Airtel Money', 'Telkom T-Kash'],
+                'UG': ['MTN Mobile Money', 'Airtel Money'],
+                'TZ': ['M-Pesa', 'Tigo Pesa', 'Airtel Money'],
+                'SN': ['Orange Money', 'Free Money', 'Expresso', 'Wave'],
+                'CI': ['Orange Money', 'MTN Mobile Money', 'Moov Money'],
+                'CM': ['Orange Money', 'MTN Mobile Money'],
+                'RW': ['MTN Mobile Money', 'Airtel Money', 'Tigo Cash'],
+                'ZA': ['FNB eWallet', 'ABSA CashSend', 'Nedbank Send-iMali'],
+                'ET': ['Telebirr', 'HelloCash', 'M-Birr'],
+                'MA': ['Cash Plus', 'Wafacash', 'Orange Money']
+            };
+            
+            // Show/hide payment method details based on selected method
+            paymentMethodSelect.addEventListener('change', function() {
+                const selectedMethod = this.value;
+                
+                // Hide all payment method details
+                bankDetails.style.display = 'none';
+                mobileMoneyDetails.style.display = 'none';
+                
+                // Show selected payment method details
+                if (selectedMethod === 'bank') {
+                    bankDetails.style.display = 'block';
+                    document.getElementById('bankName').setAttribute('required', '');
+                    document.getElementById('accountNumber').setAttribute('required', '');
+                    document.getElementById('mobileMoneyProvider').removeAttribute('required');
+                    document.getElementById('mobileMoneyNumber').removeAttribute('required');
+                } else if (selectedMethod === 'mobile_money') {
+                    mobileMoneyDetails.style.display = 'block';
+                    document.getElementById('mobileMoneyProvider').setAttribute('required', '');
+                    document.getElementById('mobileMoneyNumber').setAttribute('required', '');
+                    document.getElementById('bankName').removeAttribute('required');
+                    document.getElementById('accountNumber').removeAttribute('required');
+                } else {
+                    // For cash pickup, no additional details needed
+                    document.getElementById('bankName').removeAttribute('required');
+                    document.getElementById('accountNumber').removeAttribute('required');
+                    document.getElementById('mobileMoneyProvider').removeAttribute('required');
+                    document.getElementById('mobileMoneyNumber').removeAttribute('required');
+                }
+            });
+            
+            // Update mobile money providers based on selected country
+            countrySelect.addEventListener('change', function() {
+                const selectedCountry = this.value;
+                const providers = mobileMoneyProviders[selectedCountry] || [];
+                
+                // Clear existing options
+                mobileMoneyProviderSelect.innerHTML = '<option value="">Select a provider</option>';
+                
+                // Add provider options
+                providers.forEach(provider => {
+                    const option = document.createElement('option');
+                    option.value = provider;
+                    option.textContent = provider;
+                    mobileMoneyProviderSelect.appendChild(option);
+                });
+            });
+            
+            // Form submission
+            addBeneficiaryForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                
+                // Validate form
+                if (!this.checkValidity()) {
+                    this.reportValidity();
+                    return;
+                }
+                
+                // Get form data
+                const formData = {
+                    firstName: document.getElementById('firstName').value,
+                    lastName: document.getElementById('lastName').value,
+                    country: document.getElementById('country').value,
+                    phoneNumber: document.getElementById('phoneNumber').value,
+                    relationship: document.getElementById('relationship').value,
+                    paymentMethod: document.getElementById('paymentMethod').value
+                };
+                
+                // Add payment method specific fields
+                if (formData.paymentMethod === 'bank') {
+                    formData.bankName = document.getElementById('bankName').value;
+                    formData.accountNumber = document.getElementById('accountNumber').value;
+                    formData.branchCode = document.getElementById('branchCode').value;
+                } else if (formData.paymentMethod === 'mobile_money') {
+                    formData.mobileMoneyProvider = document.getElementById('mobileMoneyProvider').value;
+                    // Use mobile money number as the account number
+                    formData.accountNumber = document.getElementById('mobileMoneyNumber').value;
+                }
+                
+                try {
+                    // Send API request
+                    const response = await fetch('/api/beneficiaries', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData),
+                        credentials: 'include'
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to add recipient');
+                    }
+                    
+                    // Redirect to beneficiaries page on success
+                    window.location.href = 'beneficiaries.html';
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                    console.error('Failed to add beneficiary:', error);
+                }
+            });
+            
+            // Logout functionality
+            document.getElementById('logout-button').addEventListener('click', async function(event) {
+                event.preventDefault();
+                
+                try {
+                    const response = await fetch('/api/logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        // Clear any user data from local storage
+                        localStorage.removeItem('user');
+                        // Redirect to login page
+                        window.location.href = '/';
+                    } else {
+                        throw new Error('Logout failed');
+                    }
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    alert('Failed to logout. Please try again.');
+                }
+            });
+            
+            // Initialize user info
+            setUserInfo();
+        });
+    </script>
+</body>
+</html>

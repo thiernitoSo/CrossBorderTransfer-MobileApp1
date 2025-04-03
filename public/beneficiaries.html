@@ -4,8 +4,199 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recipients - SendAfrika</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Beneficiaries Page Styles */
+        .recipient-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .recipient-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            transition: var(--transition);
+            position: relative;
+        }
+        
+        .recipient-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        .recipient-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .recipient-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            margin-right: 15px;
+        }
+        
+        .recipient-name {
+            flex: 1;
+        }
+        
+        .recipient-name h3 {
+            margin: 0 0 5px;
+            font-size: 18px;
+        }
+        
+        .recipient-country {
+            display: flex;
+            align-items: center;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+        
+        .recipient-country .flag {
+            margin-right: 5px;
+            font-size: 16px;
+        }
+        
+        .recipient-info {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            width: 120px;
+            color: var(--text-light);
+        }
+        
+        .info-value {
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .recipient-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
+        
+        .action-button {
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            background-color: transparent;
+        }
+        
+        .action-button:hover {
+            background-color: var(--background-light);
+        }
+        
+        .action-button.primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .action-button.primary:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .action-button i {
+            margin-right: 5px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            color: var(--text-light);
+            margin-bottom: 20px;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+        
+        .empty-state p {
+            color: var(--text-light);
+            margin-bottom: 20px;
+        }
+        
+        .search-filter {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+        
+        .search-bar {
+            flex: 1;
+            position: relative;
+        }
+        
+        .search-bar input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 14px;
+        }
+        
+        .search-bar i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+        }
+        
+        .loading-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 300px;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -30,613 +221,327 @@
         <main class="main-content">
             <!-- Header -->
             <header class="header">
-                <h1>Recipients</h1>
+                <h1>My Recipients</h1>
                 <div class="user-profile">
                     <div class="user-avatar" id="user-initial"></div>
                     <div class="user-name" id="user-name">...</div>
                 </div>
             </header>
 
-            <!-- Main Content -->
-            <div class="content-wrapper">
-                <div class="content-header">
+            <section class="content-section">
+                <div class="section-header">
                     <div>
+                        <div class="breadcrumbs">
+                            <a href="dashboard.html">Dashboard</a>
+                            <i class="fas fa-chevron-right"></i>
+                            <span>Recipients</span>
+                        </div>
                         <h2>Manage Your Recipients</h2>
-                        <p>Add and manage people you send money to</p>
+                        <p>Add, edit, or delete your money transfer recipients.</p>
                     </div>
-                    <button id="add-new-beneficiary-btn" class="btn-primary">
-                        <i class="fas fa-plus"></i> Add New Recipient
-                    </button>
+                    <button class="btn-primary" id="add-recipient-btn"><i class="fas fa-plus"></i> Add New Recipient</button>
                 </div>
-
-                <div class="content-body">
-                    <!-- Beneficiary List Table -->
-                    <div id="beneficiary-list-view" class="beneficiary-list-container">
-                        <div class="search-filter-container">
-                            <div class="search-bar">
-                                <i class="fas fa-search"></i>
-                                <input type="text" id="search-beneficiary" placeholder="Search by name...">
-                            </div>
-                            <div class="filter-dropdown">
-                                <select id="filter-country">
-                                    <option value="">All Countries</option>
-                                    <!-- Will be populated with JS -->
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="table-container">
-                            <table id="beneficiaries-table">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Country</th>
-                                        <th>Phone Number</th>
-                                        <th>Payment Method</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="beneficiaries-table-body">
-                                    <!-- Will be populated with JS -->
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div id="empty-state" class="empty-state" style="display: none;">
-                            <div class="empty-state-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <h3>No Recipients Yet</h3>
-                            <p>You haven't added any recipients yet. Add your first recipient to get started.</p>
-                            <button class="btn-primary" id="empty-state-add-btn">
-                                <i class="fas fa-plus"></i> Add Your First Recipient
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Add/Edit Beneficiary Form -->
-                    <div id="beneficiary-form-view" class="beneficiary-form-container" style="display: none;">
-                        <div class="form-header">
-                            <h3 id="form-title">Add New Recipient</h3>
-                            <button id="close-form-btn" class="btn-icon">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-
-                        <form id="beneficiary-form">
-                            <input type="hidden" id="beneficiary-id">
-                            
-                            <div class="form-section">
-                                <h4>Recipient Information</h4>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="first-name">First Name</label>
-                                        <input type="text" id="first-name" name="firstName" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="last-name">Last Name</label>
-                                        <input type="text" id="last-name" name="lastName" required>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="country">Country</label>
-                                        <select id="country" name="country" required>
-                                            <option value="">Select a country</option>
-                                            <!-- Will be populated with JS -->
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="phone-number">Phone Number</label>
-                                        <input type="tel" id="phone-number" name="phoneNumber" placeholder="+234 123 4567 890" required>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="relationship">Relationship</label>
-                                    <select id="relationship" name="relationship" required>
-                                        <option value="">Select relationship</option>
-                                        <option value="family">Family</option>
-                                        <option value="friend">Friend</option>
-                                        <option value="business">Business</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div class="form-section">
-                                <h4>Payment Details</h4>
-                                <div class="form-group">
-                                    <label for="payment-method">Payment Method</label>
-                                    <select id="payment-method" name="paymentMethod" required>
-                                        <option value="">Select payment method</option>
-                                        <option value="bank">Bank Transfer</option>
-                                        <option value="mobile_money">Mobile Money</option>
-                                        <option value="cash_pickup">Cash Pickup</option>
-                                    </select>
-                                </div>
-                                
-                                <!-- Bank Transfer Details -->
-                                <div id="bank-details" class="payment-details" style="display: none;">
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="bank-name">Bank Name</label>
-                                            <input type="text" id="bank-name" name="bankName">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="account-number">Account Number</label>
-                                            <input type="text" id="account-number" name="accountNumber">
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="branch-code">Branch Code (if applicable)</label>
-                                        <input type="text" id="branch-code" name="branchCode">
-                                    </div>
-                                </div>
-                                
-                                <!-- Mobile Money Details -->
-                                <div id="mobile-money-details" class="payment-details" style="display: none;">
-                                    <div class="form-group">
-                                        <label for="mobile-money-provider">Mobile Money Provider</label>
-                                        <select id="mobile-money-provider" name="mobileMoneyProvider">
-                                            <option value="">Select provider</option>
-                                            <option value="mtn">MTN Mobile Money</option>
-                                            <option value="airtel">Airtel Money</option>
-                                            <option value="orange">Orange Money</option>
-                                            <option value="mpesa">M-Pesa</option>
-                                            <option value="vodafone">Vodafone Cash</option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <!-- Cash Pickup Details - no additional fields needed -->
-                                <div id="cash-pickup-details" class="payment-details" style="display: none;">
-                                    <p class="info-text">
-                                        <i class="fas fa-info-circle"></i>
-                                        The recipient will be able to collect cash at any of our partner locations with their ID and the transaction reference number.
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="button" id="cancel-btn" class="btn-secondary">Cancel</button>
-                                <button type="submit" id="save-btn" class="btn-primary">Save Recipient</button>
-                            </div>
-                        </form>
+                
+                <div class="search-filter">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="search-recipients" placeholder="Search recipients...">
                     </div>
                 </div>
-            </div>
+                
+                <div id="loading-container" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>No Recipients Found</h3>
+                    <p>You haven't added any recipients yet. Add a recipient to start sending money.</p>
+                    <button class="btn-primary" id="empty-add-recipient-btn"><i class="fas fa-plus"></i> Add New Recipient</button>
+                </div>
+                
+                <div id="recipients-grid" class="recipient-grid" style="display: none;">
+                    <!-- Recipients will be loaded here -->
+                </div>
+            </section>
         </main>
     </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div id="delete-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Delete Recipient</h3>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete <span id="delete-recipient-name"></span>? This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary close-modal">Cancel</button>
-                <button id="confirm-delete-btn" class="btn-danger">Delete</button>
-            </div>
-        </div>
-    </div>
-
+    
     <script>
-        // Global variables
-        let beneficiaries = [];
-        let editingBeneficiaryId = null;
-        let africanCountries = [
-            { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
-            { code: 'GH', name: 'Ghana', flag: '🇬🇭' },
-            { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
-            { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
-            { code: 'UG', name: 'Uganda', flag: '🇺🇬' },
-            { code: 'TZ', name: 'Tanzania', flag: '🇹🇿' },
-            { code: 'RW', name: 'Rwanda', flag: '🇷🇼' },
-            { code: 'SN', name: 'Senegal', flag: '🇸🇳' },
-            { code: 'CI', name: 'Côte d\'Ivoire', flag: '🇨🇮' },
-            { code: 'CM', name: 'Cameroon', flag: '🇨🇲' },
-            { code: 'ET', name: 'Ethiopia', flag: '🇪🇹' },
-            { code: 'MA', name: 'Morocco', flag: '🇲🇦' }
-        ];
-
         document.addEventListener('DOMContentLoaded', function() {
-            // Check if user is logged in
-            fetch('/api/user')
-                .then(response => {
-                    if (!response.ok) {
-                        // Not authenticated, redirect to login page
-                        window.location.href = 'index.html';
-                        return;
-                    }
-                    return response.json();
-                })
-                .then(user => {
-                    if (user) {
-                        // Display user information
-                        document.getElementById('user-name').textContent = `${user.firstName} ${user.lastName}`;
-                        document.getElementById('user-initial').textContent = user.firstName.charAt(0);
-                        
-                        // Load beneficiaries
-                        loadBeneficiaries();
-                        
-                        // Populate country dropdowns
-                        populateCountryDropdowns();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error checking authentication status:', error);
-                    window.location.href = 'index.html';
-                });
-            
-            // Logout functionality
-            document.getElementById('logout-button').addEventListener('click', function() {
-                fetch('/api/logout', { method: 'POST' })
-                    .then(() => { window.location.href = 'index.html'; })
-                    .catch(error => { console.error('Error logging out:', error); });
-            });
-            
-            // Add new beneficiary button
-            document.getElementById('add-new-beneficiary-btn').addEventListener('click', showAddBeneficiaryForm);
-            document.getElementById('empty-state-add-btn').addEventListener('click', showAddBeneficiaryForm);
-            
-            // Form buttons
-            document.getElementById('close-form-btn').addEventListener('click', hideForm);
-            document.getElementById('cancel-btn').addEventListener('click', hideForm);
-            document.getElementById('beneficiary-form').addEventListener('submit', saveBeneficiary);
-            
-            // Payment method change handler
-            document.getElementById('payment-method').addEventListener('change', togglePaymentDetails);
-            
-            // Search and filter handlers
-            document.getElementById('search-beneficiary').addEventListener('input', filterBeneficiaries);
-            document.getElementById('filter-country').addEventListener('change', filterBeneficiaries);
-            
-            // Modal close buttons
-            document.querySelectorAll('.close-modal').forEach(button => {
-                button.addEventListener('click', closeModal);
-            });
-            
-            // Confirm delete button
-            document.getElementById('confirm-delete-btn').addEventListener('click', confirmDeleteBeneficiary);
-            
-            // Check if we should show the add form immediately (from URL param)
-            const urlParams = new URLSearchParams(window.location.search);
-            if(urlParams.get('add') === 'true') {
-                setTimeout(showAddBeneficiaryForm, 500); // Short delay to ensure page is loaded
-            }
-        });
-        
-        function loadBeneficiaries() {
-            fetch('/api/beneficiaries')
-                .then(response => response.json())
-                .then(data => {
-                    beneficiaries = data;
-                    renderBeneficiaries();
-                })
-                .catch(error => {
-                    console.error('Error loading beneficiaries:', error);
-                    showError('Failed to load recipients. Please try again.');
-                });
-        }
-        
-        function renderBeneficiaries() {
-            const tableBody = document.getElementById('beneficiaries-table-body');
+            // Elements
+            const addRecipientBtn = document.getElementById('add-recipient-btn');
+            const emptyAddRecipientBtn = document.getElementById('empty-add-recipient-btn');
+            const loadingContainer = document.getElementById('loading-container');
             const emptyState = document.getElementById('empty-state');
+            const recipientsGrid = document.getElementById('recipients-grid');
+            const searchInput = document.getElementById('search-recipients');
+            const userNameElement = document.getElementById('user-name');
+            const userInitialElement = document.getElementById('user-initial');
             
-            if (beneficiaries.length === 0) {
-                // Show empty state
-                document.querySelector('.table-container').style.display = 'none';
-                document.querySelector('.search-filter-container').style.display = 'none';
-                emptyState.style.display = 'flex';
-                return;
-            }
-            
-            // Show table and hide empty state
-            document.querySelector('.table-container').style.display = 'block';
-            document.querySelector('.search-filter-container').style.display = 'flex';
-            emptyState.style.display = 'none';
-            
-            // Clear existing rows
-            tableBody.innerHTML = '';
-            
-            // Add data rows
-            beneficiaries.forEach(beneficiary => {
-                const row = document.createElement('tr');
-                
-                // Find country details
-                const country = africanCountries.find(c => c.code === beneficiary.country) || { name: beneficiary.country, flag: '' };
-                
-                row.innerHTML = `
-                    <td>
-                        <div class="recipient-name">
-                            <div class="beneficiary-avatar">${beneficiary.firstName.charAt(0)}${beneficiary.lastName.charAt(0)}</div>
-                            <div>${beneficiary.firstName} ${beneficiary.lastName}</div>
-                        </div>
-                    </td>
-                    <td>${country.flag} ${country.name}</td>
-                    <td>${beneficiary.phoneNumber}</td>
-                    <td>${formatPaymentMethod(beneficiary.paymentMethod)}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-icon edit-btn" data-id="${beneficiary.id}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn-icon delete-btn" data-id="${beneficiary.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                
-                tableBody.appendChild(row);
-            });
-            
-            // Add event listeners to action buttons
-            document.querySelectorAll('.edit-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    showEditBeneficiaryForm(id);
-                });
-            });
-            
-            document.querySelectorAll('.delete-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    showDeleteConfirmation(id);
-                });
-            });
-        }
-        
-        function populateCountryDropdowns() {
-            // Populate country select in form
-            const countrySelect = document.getElementById('country');
-            const filterCountrySelect = document.getElementById('filter-country');
-            
-            countrySelect.innerHTML = '<option value="">Select a country</option>';
-            africanCountries.forEach(country => {
-                countrySelect.innerHTML += `<option value="${country.code}">${country.flag} ${country.name}</option>`;
-                filterCountrySelect.innerHTML += `<option value="${country.code}">${country.flag} ${country.name}</option>`;
-            });
-        }
-        
-        function showAddBeneficiaryForm() {
-            // Set form title and clear form
-            document.getElementById('form-title').textContent = 'Add New Recipient';
-            document.getElementById('beneficiary-form').reset();
-            document.getElementById('beneficiary-id').value = '';
-            editingBeneficiaryId = null;
-            
-            // Hide beneficiary list view and show form view
-            document.getElementById('beneficiary-list-view').style.display = 'none';
-            document.getElementById('beneficiary-form-view').style.display = 'block';
-            
-            // Reset payment method sections
-            hideAllPaymentDetails();
-        }
-        
-        function showEditBeneficiaryForm(id) {
-            // Find beneficiary
-            const beneficiary = beneficiaries.find(b => b.id === id);
-            if (!beneficiary) return;
-            
-            // Set form title and populate form
-            document.getElementById('form-title').textContent = 'Edit Recipient';
-            
-            // Populate form fields
-            document.getElementById('beneficiary-id').value = beneficiary.id;
-            document.getElementById('first-name').value = beneficiary.firstName;
-            document.getElementById('last-name').value = beneficiary.lastName;
-            document.getElementById('country').value = beneficiary.country;
-            document.getElementById('phone-number').value = beneficiary.phoneNumber;
-            document.getElementById('relationship').value = beneficiary.relationship;
-            document.getElementById('payment-method').value = beneficiary.paymentMethod;
-            
-            // Show the appropriate payment details section based on payment method
-            togglePaymentDetails();
-            
-            // Populate payment details based on payment method
-            if (beneficiary.paymentMethod === 'bank') {
-                document.getElementById('bank-name').value = beneficiary.bankName || '';
-                document.getElementById('account-number').value = beneficiary.accountNumber || '';
-                document.getElementById('branch-code').value = beneficiary.branchCode || '';
-            } else if (beneficiary.paymentMethod === 'mobile_money') {
-                document.getElementById('mobile-money-provider').value = beneficiary.mobileMoneyProvider || '';
-            }
-            
-            // Hide beneficiary list view and show form view
-            document.getElementById('beneficiary-list-view').style.display = 'none';
-            document.getElementById('beneficiary-form-view').style.display = 'block';
-            
-            // Set editing flag
-            editingBeneficiaryId = beneficiary.id;
-        }
-        
-        function hideForm() {
-            // Hide form view and show beneficiary list view
-            document.getElementById('beneficiary-form-view').style.display = 'none';
-            document.getElementById('beneficiary-list-view').style.display = 'block';
-            
-            // Clear form
-            document.getElementById('beneficiary-form').reset();
-            editingBeneficiaryId = null;
-        }
-        
-        function saveBeneficiary(event) {
-            event.preventDefault();
-            
-            // Get form data
-            const formData = {
-                firstName: document.getElementById('first-name').value,
-                lastName: document.getElementById('last-name').value,
-                country: document.getElementById('country').value,
-                phoneNumber: document.getElementById('phone-number').value,
-                relationship: document.getElementById('relationship').value,
-                paymentMethod: document.getElementById('payment-method').value
+            // Set user information from local storage
+            const setUserInfo = () => {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (user && user.firstName) {
+                    userNameElement.textContent = `${user.firstName} ${user.lastName || ''}`;
+                    userInitialElement.textContent = user.firstName.charAt(0);
+                }
             };
             
-            // Add payment method specific fields
-            if (formData.paymentMethod === 'bank') {
-                formData.bankName = document.getElementById('bank-name').value;
-                formData.accountNumber = document.getElementById('account-number').value;
-                formData.branchCode = document.getElementById('branch-code').value;
-            } else if (formData.paymentMethod === 'mobile_money') {
-                formData.mobileMoneyProvider = document.getElementById('mobile-money-provider').value;
-            }
+            // Get country name from country code
+            const getCountryName = (countryCode) => {
+                const countries = {
+                    'GH': 'Ghana',
+                    'NG': 'Nigeria',
+                    'KE': 'Kenya',
+                    'RW': 'Rwanda',
+                    'SN': 'Senegal',
+                    'CI': 'Côte d\'Ivoire',
+                    'CM': 'Cameroon',
+                    'ZA': 'South Africa',
+                    'TZ': 'Tanzania',
+                    'UG': 'Uganda',
+                    'ET': 'Ethiopia',
+                    'MA': 'Morocco'
+                };
+                return countries[countryCode] || countryCode;
+            };
             
-            // Determine if we're creating or updating
-            const isEditing = editingBeneficiaryId !== null;
+            // Get country flag from country code
+            const getCountryFlag = (countryCode) => {
+                const flags = {
+                    'GH': '🇬🇭',
+                    'NG': '🇳🇬',
+                    'KE': '🇰🇪',
+                    'RW': '🇷🇼',
+                    'SN': '🇸🇳',
+                    'CI': '🇨🇮',
+                    'CM': '🇨🇲',
+                    'ZA': '🇿🇦',
+                    'TZ': '🇹🇿',
+                    'UG': '🇺🇬',
+                    'ET': '🇪🇹',
+                    'MA': '🇲🇦'
+                };
+                return flags[countryCode] || '🌍';
+            };
             
-            // API URL and method
-            let url = '/api/beneficiaries';
-            let method = 'POST';
+            // Format payment method for display
+            const formatPaymentMethod = (method) => {
+                switch (method) {
+                    case 'bank':
+                        return 'Bank Transfer';
+                    case 'mobile_money':
+                        return 'Mobile Money';
+                    case 'cash_pickup':
+                        return 'Cash Pickup';
+                    default:
+                        return method;
+                }
+            };
             
-            if (isEditing) {
-                url = `/api/beneficiaries/${editingBeneficiaryId}`;
-                method = 'PUT';
-            }
-            
-            // Send request to API
-            fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Failed to save recipient');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Show success message
-                    const message = isEditing ? 'Recipient updated successfully!' : 'Recipient added successfully!';
-                    // Could add a toast/notification system here
-                    console.log(message);
-                    
-                    // Reload beneficiaries and return to list view
-                    loadBeneficiaries();
-                    hideForm();
-                })
-                .catch(error => {
-                    console.error('Error saving beneficiary:', error);
-                    alert('Failed to save recipient. Please try again.');
-                });
-        }
-        
-        function showDeleteConfirmation(id) {
-            // Find beneficiary
-            const beneficiary = beneficiaries.find(b => b.id === id);
-            if (!beneficiary) return;
-            
-            // Set beneficiary name in modal
-            document.getElementById('delete-recipient-name').textContent = `${beneficiary.firstName} ${beneficiary.lastName}`;
-            
-            // Store ID for delete confirmation
-            document.getElementById('confirm-delete-btn').setAttribute('data-id', id);
-            
-            // Show modal
-            document.getElementById('delete-modal').style.display = 'flex';
-        }
-        
-        function closeModal() {
-            document.getElementById('delete-modal').style.display = 'none';
-        }
-        
-        function confirmDeleteBeneficiary() {
-            const id = document.getElementById('confirm-delete-btn').getAttribute('data-id');
-            if (!id) return;
-            
-            fetch(`/api/beneficiaries/${id}`, {
-                method: 'DELETE'
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Failed to delete recipient');
-                    }
-                    
-                    // Remove from local array
-                    beneficiaries = beneficiaries.filter(b => b.id !== id);
-                    
-                    // Close modal and render updated list
-                    closeModal();
-                    renderBeneficiaries();
-                })
-                .catch(error => {
-                    console.error('Error deleting beneficiary:', error);
-                    alert('Failed to delete recipient. Please try again.');
-                    closeModal();
-                });
-        }
-        
-        function togglePaymentDetails() {
-            // Hide all payment detail sections first
-            hideAllPaymentDetails();
-            
-            // Show the appropriate section based on selected payment method
-            const paymentMethod = document.getElementById('payment-method').value;
-            
-            if (paymentMethod === 'bank') {
-                document.getElementById('bank-details').style.display = 'block';
-            } else if (paymentMethod === 'mobile_money') {
-                document.getElementById('mobile-money-details').style.display = 'block';
-            } else if (paymentMethod === 'cash_pickup') {
-                document.getElementById('cash-pickup-details').style.display = 'block';
-            }
-        }
-        
-        function hideAllPaymentDetails() {
-            document.getElementById('bank-details').style.display = 'none';
-            document.getElementById('mobile-money-details').style.display = 'none';
-            document.getElementById('cash-pickup-details').style.display = 'none';
-        }
-        
-        function filterBeneficiaries() {
-            const searchTerm = document.getElementById('search-beneficiary').value.toLowerCase();
-            const countryFilter = document.getElementById('filter-country').value;
-            
-            // Apply filters to all beneficiaries
-            const filteredBeneficiaries = beneficiaries.filter(beneficiary => {
-                const fullName = `${beneficiary.firstName} ${beneficiary.lastName}`.toLowerCase();
-                const matchesSearch = searchTerm === '' || fullName.includes(searchTerm);
-                const matchesCountry = countryFilter === '' || beneficiary.country === countryFilter;
+            // Create recipient card
+            const createRecipientCard = (recipient) => {
+                const card = document.createElement('div');
+                card.className = 'recipient-card';
                 
-                return matchesSearch && matchesCountry;
+                const initials = recipient.firstName.charAt(0) + recipient.lastName.charAt(0);
+                
+                card.innerHTML = `
+                    <div class="recipient-header">
+                        <div class="recipient-avatar">${initials}</div>
+                        <div class="recipient-name">
+                            <h3>${recipient.firstName} ${recipient.lastName}</h3>
+                            <div class="recipient-country">
+                                <span class="flag">${getCountryFlag(recipient.country)}</span>
+                                <span>${getCountryName(recipient.country)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="recipient-info">
+                        <div class="info-row">
+                            <span class="info-label">Phone:</span>
+                            <span class="info-value">${recipient.phoneNumber}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Payment:</span>
+                            <span class="info-value">${formatPaymentMethod(recipient.paymentMethod)}</span>
+                        </div>
+                        ${recipient.paymentMethod === 'bank' ? `
+                            <div class="info-row">
+                                <span class="info-label">Bank:</span>
+                                <span class="info-value">${recipient.bankName || 'N/A'}</span>
+                            </div>
+                        ` : ''}
+                        ${recipient.paymentMethod === 'mobile_money' ? `
+                            <div class="info-row">
+                                <span class="info-label">Provider:</span>
+                                <span class="info-value">${recipient.mobileMoneyProvider || 'N/A'}</span>
+                            </div>
+                        ` : ''}
+                        <div class="info-row">
+                            <span class="info-label">Relationship:</span>
+                            <span class="info-value">${recipient.relationship}</span>
+                        </div>
+                    </div>
+                    <div class="recipient-actions">
+                        <button class="action-button edit-button" data-id="${recipient.id}">
+                            <i class="fas fa-pencil-alt"></i> Edit
+                        </button>
+                        <button class="action-button primary send-button" data-id="${recipient.id}">
+                            <i class="fas fa-paper-plane"></i> Send Money
+                        </button>
+                    </div>
+                `;
+                
+                return card;
+            };
+            
+            // Load recipients from API
+            const loadRecipients = async () => {
+                try {
+                    loadingContainer.style.display = 'flex';
+                    emptyState.style.display = 'none';
+                    recipientsGrid.style.display = 'none';
+                    
+                    const response = await fetch('/api/beneficiaries', {
+                        method: 'GET',
+                        credentials: 'include'
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to load recipients');
+                    }
+                    
+                    const recipients = await response.json();
+                    
+                    loadingContainer.style.display = 'none';
+                    
+                    if (recipients.length === 0) {
+                        emptyState.style.display = 'block';
+                    } else {
+                        recipientsGrid.style.display = 'grid';
+                        renderRecipients(recipients);
+                    }
+                } catch (error) {
+                    loadingContainer.style.display = 'none';
+                    emptyState.style.display = 'block';
+                    console.error('Failed to load recipients:', error);
+                }
+            };
+            
+            // Render recipients to grid
+            const renderRecipients = (recipients) => {
+                recipientsGrid.innerHTML = '';
+                
+                recipients.forEach(recipient => {
+                    const card = createRecipientCard(recipient);
+                    recipientsGrid.appendChild(card);
+                });
+                
+                // Add event listeners to buttons
+                document.querySelectorAll('.edit-button').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        window.location.href = `edit-beneficiary.html?id=${id}`;
+                    });
+                });
+                
+                document.querySelectorAll('.send-button').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        window.location.href = `send-money.html?beneficiaryId=${id}`;
+                    });
+                });
+            };
+            
+            // Filter recipients by search term
+            const filterRecipients = async (searchTerm) => {
+                try {
+                    const response = await fetch('/api/beneficiaries', {
+                        method: 'GET',
+                        credentials: 'include'
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to load recipients');
+                    }
+                    
+                    let recipients = await response.json();
+                    
+                    if (searchTerm) {
+                        searchTerm = searchTerm.toLowerCase();
+                        recipients = recipients.filter(recipient => 
+                            recipient.firstName.toLowerCase().includes(searchTerm) ||
+                            recipient.lastName.toLowerCase().includes(searchTerm) ||
+                            getCountryName(recipient.country).toLowerCase().includes(searchTerm) ||
+                            recipient.phoneNumber.includes(searchTerm)
+                        );
+                    }
+                    
+                    loadingContainer.style.display = 'none';
+                    
+                    if (recipients.length === 0) {
+                        emptyState.style.display = 'block';
+                        recipientsGrid.style.display = 'none';
+                    } else {
+                        emptyState.style.display = 'none';
+                        recipientsGrid.style.display = 'grid';
+                        renderRecipients(recipients);
+                    }
+                } catch (error) {
+                    loadingContainer.style.display = 'none';
+                    emptyState.style.display = 'block';
+                    console.error('Failed to filter recipients:', error);
+                }
+            };
+            
+            // Add event listener to search input
+            searchInput.addEventListener('input', function() {
+                filterRecipients(this.value);
             });
             
-            // Temporarily set filtered data and render
-            const originalBeneficiaries = beneficiaries;
-            beneficiaries = filteredBeneficiaries;
-            renderBeneficiaries();
-            beneficiaries = originalBeneficiaries; // Restore original data
-        }
-        
-        function formatPaymentMethod(method) {
-            switch (method) {
-                case 'bank':
-                    return 'Bank Transfer';
-                case 'mobile_money':
-                    return 'Mobile Money';
-                case 'cash_pickup':
-                    return 'Cash Pickup';
-                default:
-                    return method;
-            }
-        }
-        
-        function showError(message) {
-            // You could implement a proper error notification system here
-            alert(message);
-        }
+            // Add event listeners to add recipient buttons
+            addRecipientBtn.addEventListener('click', function() {
+                window.location.href = 'add-beneficiary.html';
+            });
+            
+            emptyAddRecipientBtn.addEventListener('click', function() {
+                window.location.href = 'add-beneficiary.html';
+            });
+            
+            // Logout functionality
+            document.getElementById('logout-button').addEventListener('click', async function(event) {
+                event.preventDefault();
+                
+                try {
+                    const response = await fetch('/api/logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        // Clear any user data from local storage
+                        localStorage.removeItem('user');
+                        // Redirect to login page
+                        window.location.href = '/';
+                    } else {
+                        throw new Error('Logout failed');
+                    }
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    alert('Failed to logout. Please try again.');
+                }
+            });
+            
+            // Initialize user info
+            setUserInfo();
+            
+            // Load recipients
+            loadRecipients();
+        });
     </script>
 </body>
 </html>
