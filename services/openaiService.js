@@ -5,7 +5,7 @@
  * capabilities to the application, leveraging OpenAI's advanced models.
  */
 
-import OpenAI from 'openai';
+const OpenAI = require('openai');
 
 class OpenAIService {
   constructor() {
@@ -537,4 +537,4 @@ Based on this transaction history, provide:
 }
 
 const openaiService = new OpenAIService();
-export default openaiService;
+module.exports = openaiService;

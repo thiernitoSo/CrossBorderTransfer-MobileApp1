@@ -1,13 +1,13 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import session from 'express-session';
-import passport from 'passport';
-import { Strategy as LocalStrategy } from 'passport-local';
-import crypto from 'crypto';
-import { promisify } from 'util';
-import memorystore from 'memorystore';
-import { v4 as uuidv4 } from 'uuid';
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const session = require('express-session');
+const passport = require('passport');
+const { Strategy: LocalStrategy } = require('passport-local');
+const crypto = require('crypto');
+const { promisify } = require('util');
+const memorystore = require('memorystore');
+const { v4: uuidv4 } = require('uuid');
 
 const MemoryStore = memorystore(session);
 
@@ -16,7 +16,9 @@ dotenv.config();
 
 // Import payment services if available
 let orangeMoneyService, rafikiService, paymentService;
-let openaiService;
+
+// Import OpenAI service
+const openaiService = require('./services/openaiService');
 
 // For now, we'll just acknowledge these services would be imported
 // in a production environment but we don't need to worry about them for our app
@@ -907,7 +909,7 @@ function generateResponse(userMessage) {
 }
 
 // Export the function for use in openaiService.js
-export { generateResponse };
+module.exports = { generateResponse };
 
 app.post('/api/chat', async (req, res) => {
   try {
@@ -926,26 +928,6 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-app.post('/api/analyze-transaction', async (req, res) => {
-  try {
-    const { transaction } = req.body;
-    
-    if (!transaction) {
-      return res.status(400).json({ message: 'Invalid request. Transaction data is required.' });
-    }
-    
-    const analysis = await openaiService.analyzeTransaction(transaction);
-    return res.json(analysis);
-  } catch (error) {
-    console.error('Transaction analysis error:', error);
-    return res.status(500).json({ 
-      message: 'Error analyzing transaction', 
-      error: error.message 
-    });
-  }
-});
-
-// Add endpoint to analyze transaction data
 app.post('/api/analyze-transaction', async (req, res) => {
   try {
     const { transaction } = req.body;
@@ -1250,4 +1232,4 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Access the application at: https://workspace.thiernosow.repl.co`);
 });
 
-export default app;
+module.exports = app;
