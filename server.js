@@ -58,6 +58,20 @@ class MemStorage {
       createdAt: new Date().toISOString()
     });
     
+    // Create a test admin user
+    this.users.push({
+      id: '2',
+      firstName: 'Admin',
+      lastName: 'User',
+      email: 'admin@example.com',
+      phoneNumber: '+15559876543',
+      // Password: 'admin123'
+      password: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9.29eeec87b99e20ae',
+      isVerified: true,
+      role: 'admin',
+      createdAt: new Date().toISOString()
+    });
+    
     // Create test beneficiaries
     this.beneficiaries.push({
       id: '1',
