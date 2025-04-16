@@ -2,12 +2,12 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from '../shared/schema';
 
-const DATABASE_URL = 'postgresql://neondb_owner:npg_3ThurtG0lVZy@ep-lively-frog-a6oqflji.us-west-2.aws.neon.tech/neondb?sslmode=require';
+const DATABASE_URL = `postgresql://neondb_owner:npg_3ThurtG0lVZy@ep-lively-frog-a6oqflji.us-west-2.aws.neon.tech/neondb?sslmode=require`;
 
-export const pool = new Pool({ 
+export const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false
+    rejectUnauthorized: true
   },
   max: 20,
   idleTimeoutMillis: 30000,
