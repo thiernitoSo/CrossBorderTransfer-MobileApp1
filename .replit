@@ -4,7 +4,6 @@ modules = ["nodejs-20", "postgresql-16"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project "
@@ -15,9 +14,16 @@ mode = "sequential"
 agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "chmod +x ./start-mood-tracker.sh && ./start-mood-tracker.sh"
-waitForPort = 5000
+task = "workflow.run"
+args = "Project "
+
+[[workflows.workflow.tasks]]
+task = "packager.installForLanguage"
+args = "nix"
+
+[[workflows.workflow.tasks]]
+task = "packager.installForLanguage"
+args = "nodejs"
 
 [[workflows.workflow]]
 name = "SendAfrikaApp"
