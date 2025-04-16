@@ -27,7 +27,7 @@ console.log('OpenAI service loaded successfully');
 
 // Create Express application
 const app = express();
-const PORT = process.env.PORT || 5000; // Use port 5000 which is standard for Replit
+const PORT = 5000; // Always use port 5000 which is standard for Replit
 
 // In-memory storage
 class MemStorage {
@@ -382,8 +382,17 @@ const storage = new MemStorage();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5000', 'https://workspace.thiernosow.repl.co'],
+  credentials: true
+}));
 app.use(express.static('public')); // Serve static files from the 'public' directory
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error', message: err.message });
+});
 
 // Session and authentication setup
 const scryptAsync = promisify(crypto.scrypt);
@@ -1526,9 +1535,45 @@ app.get('*', (req, res) => {
   res.sendFile('index.html', { root: './public' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    error: 'Server error',
+    message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
+  });
+});
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  // Close server and any other resources
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  // Close server and any other resources
+  process.exit(0);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  // Keep the process alive but log the error
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Keep the process alive but log the error
+});
+
+// Start the server
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://0.0.0.0:${PORT}`);
   console.log(`Access the application at: https://workspace.thiernosow.repl.co`);
+  console.log('Server ready to accept connections');
 });
 
 module.exports = app;
