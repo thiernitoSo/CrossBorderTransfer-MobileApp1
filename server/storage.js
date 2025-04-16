@@ -25,7 +25,7 @@ class MemStorage {
         lastName: 'User',
         email: 'admin@example.com',
         phoneNumber: '+1234567890',
-        password: '$2b$10$X/4ueKR4HMCnteLjvxXFT.zGUwgHoVEkV5mQvLadMhntfW7w8lfua', // admin123
+        password: 'admin123', // stored as plain text for development only
         isVerified: true,
         role: 'admin',
         createdAt: new Date().toISOString()
@@ -38,7 +38,7 @@ class MemStorage {
         lastName: 'User',
         email: 'user@example.com',
         phoneNumber: '+9876543210',
-        password: '$2b$10$X/4ueKR4HMCnteLjvxXFT.zGUwgHoVEkV5mQvLadMhntfW7w8lfua', // admin123
+        password: 'admin123', // stored as plain text for development only
         isVerified: true,
         role: 'user',
         createdAt: new Date().toISOString()
