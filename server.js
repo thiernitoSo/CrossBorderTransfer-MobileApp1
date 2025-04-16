@@ -36,6 +36,7 @@ class MemStorage {
     this.beneficiaries = [];
     this.transactions = [];
     this.resetTokens = [];
+    this.moodEntries = []; // Array to store mood entries
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // prune expired entries every 24h
     });
