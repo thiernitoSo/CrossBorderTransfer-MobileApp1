@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Money Mood Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f9fc;
+    }
+    h1, h2, h3 {
+      color: #0088aa;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .mood-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .mood-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f0f8ff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .mood-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .mood-item.selected {
+      background: #e0f7fa;
+      border: 2px solid #00b0ff;
+    }
+    .mood-emoji {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    .mood-name {
+      font-weight: 500;
+    }
+    .intensity-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .intensity-dots {
+      display: flex;
+      flex: 1;
+      justify-content: space-between;
+    }
+    .intensity-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #e0e0e0;
+      cursor: pointer;
+    }
+    .intensity-dot.active {
+      background: #00b0ff;
+    }
+    .btn {
+      background: #00b0ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .btn:hover {
+      background: #008dcc;
+    }
+    .btn:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 80px;
+      margin-bottom: 15px;
+    }
+    .history-item {
+      border-bottom: 1px solid #eee;
+      padding: 10px 0;
+    }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .mood-chip {
+      display: flex;
+      align-items: center;
+      background: #e8f4f8;
+      border-radius: 20px;
+      padding: 4px 12px;
+    }
+    .history-emoji {
+      font-size: 20px;
+      margin-right: 8px;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    .status-bar {
+      background: #f0f8ff;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      border-left: 4px solid #00b0ff;
+    }
+    .refresh-btn {
+      background: transparent;
+      border: 1px solid #00b0ff;
+      color: #00b0ff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .refresh-btn:hover {
+      background: #f0f8ff;
+    }
+    .no-entries {
+      text-align: center;
+      padding: 30px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="status-bar">
+    Status: <span id="server-status">Checking connection...</span>
+    <button class="refresh-btn" id="refresh-status">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+
+  <div class="card">
+    <h2>Money Mood Tracker</h2>
+    <p>How does this transaction make you feel?</p>
+    
+    <div id="mood-grid" class="mood-grid">
+      <!-- Moods will be loaded here -->
+      <div class="loading">Loading moods...</div>
+    </div>
+    
+    <div id="mood-details" style="display: none;">
+      <h3>Intensity</h3>
+      <div class="intensity-container">
+        <button id="decrease-intensity" class="btn">-</button>
+        <div class="intensity-dots" id="intensity-dots">
+          <div class="intensity-dot" data-level="1"></div>
+          <div class="intensity-dot" data-level="2"></div>
+          <div class="intensity-dot" data-level="3"></div>
+          <div class="intensity-dot" data-level="4"></div>
+          <div class="intensity-dot" data-level="5"></div>
+        </div>
+        <button id="increase-intensity" class="btn">+</button>
+      </div>
+      <p id="intensity-label">Moderate</p>
+      
+      <h3>Add a Note (Optional)</h3>
+      <textarea id="mood-note" placeholder="Why do you feel this way?"></textarea>
+      
+      <button id="submit-mood" class="btn">Record My Mood</button>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Your Mood History</h2>
+    <button id="refresh-history" class="refresh-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+      </svg>
+      Refresh History
+    </button>
+    
+    <div id="mood-history">
+      <div class="loading">Loading mood history...</div>
+    </div>
+  </div>
+  
+  <script>
+    // Configuration
+    const API_URL = 'http://0.0.0.0:5000';
+    const USER_ID = '1'; // Using test user ID 1
+    
+    // DOM Elements
+    const serverStatus = document.getElementById('server-status');
+    const refreshStatus = document.getElementById('refresh-status');
+    const moodGrid = document.getElementById('mood-grid');
+    const moodDetails = document.getElementById('mood-details');
+    const intensityDots = document.getElementById('intensity-dots');
+    const intensityLabel = document.getElementById('intensity-label');
+    const decreaseIntensity = document.getElementById('decrease-intensity');
+    const increaseIntensity = document.getElementById('increase-intensity');
+    const moodNote = document.getElementById('mood-note');
+    const submitMood = document.getElementById('submit-mood');
+    const refreshHistory = document.getElementById('refresh-history');
+    const moodHistory = document.getElementById('mood-history');
+    
+    // State
+    let availableMoods = [];
+    let selectedMood = null;
+    let currentIntensity = 3;
+    let moodEntries = [];
+    
+    // Helper functions
+    function updateIntensityUI() {
+      // Update dots
+      document.querySelectorAll('.intensity-dot').forEach(dot => {
+        const level = parseInt(dot.dataset.level);
+        if (level <= currentIntensity) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+      
+      // Update label
+      const labels = ['Very Mild', 'Mild', 'Moderate', 'Strong', 'Very Strong'];
+      intensityLabel.textContent = labels[currentIntensity - 1];
+    }
+    
+    function getMoodById(id) {
+      return availableMoods.find(mood => mood.id === id);
+    }
+    
+    // API functions
+    async function checkServerStatus() {
+      try {
+        const response = await fetch(`${API_URL}/api/health`);
+        const data = await response.json();
+        
+        if (data.status === 'ok') {
+          serverStatus.textContent = 'Connected';
+          serverStatus.style.color = '#27AE60';
+          return true;
+        } else {
+          throw new Error('Server reported unhealthy status');
+        }
+      } catch (error) {
+        console.error('Server connection error:', error);
+        serverStatus.textContent = 'Disconnected';
+        serverStatus.style.color = '#E74C3C';
+        return false;
+      }
+    }
+    
+    async function loadMoods() {
+      try {
+        const response = await fetch(`${API_URL}/api/moods`);
+        const data = await response.json();
+        
+        if (data.success) {
+          availableMoods = data.data;
+          renderMoodGrid();
+        } else {
+          moodGrid.innerHTML = '<p>Failed to load moods</p>';
+        }
+      } catch (error) {
+        console.error('Error loading moods:', error);
+        moodGrid.innerHTML = '<p>Failed to load moods</p>';
+      }
+    }
+    
+    async function loadMoodEntries() {
+      try {
+        moodHistory.innerHTML = '<div class="loading">Loading mood history...</div>';
+        
+        const response = await fetch(`${API_URL}/api/mood-entries/${USER_ID}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          moodEntries = data.data;
+          renderMoodHistory();
+        } else {
+          moodHistory.innerHTML = '<p>Failed to load mood history</p>';
+        }
+      } catch (error) {
+        console.error('Error loading mood entries:', error);
+        moodHistory.innerHTML = '<p>Failed to load mood history</p>';
+      }
+    }
+    
+    async function submitMoodEntry() {
+      if (!selectedMood) return;
+      
+      try {
+        submitMood.disabled = true;
+        submitMood.textContent = 'Submitting...';
+        
+        const moodData = {
+          userId: USER_ID,
+          transactionId: '1', // Using a default transaction ID
+          moodId: selectedMood,
+          intensity: currentIntensity,
+          note: moodNote.value
+        };
+        
+        const response = await fetch(`${API_URL}/api/mood-entries`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(moodData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Reset form
+          resetMoodForm();
+          // Reload mood entries
+          await loadMoodEntries();
+        } else {
+          alert('Failed to submit mood entry');
+        }
+      } catch (error) {
+        console.error('Error submitting mood:', error);
+        alert('Error submitting mood entry');
+      } finally {
+        submitMood.disabled = false;
+        submitMood.textContent = 'Record My Mood';
+      }
+    }
+    
+    // Rendering functions
+    function renderMoodGrid() {
+      moodGrid.innerHTML = '';
+      
+      availableMoods.forEach(mood => {
+        const moodElement = document.createElement('div');
+        moodElement.className = `mood-item ${selectedMood === mood.id ? 'selected' : ''}`;
+        moodElement.innerHTML = `
+          <div class="mood-emoji">${mood.emoji}</div>
+          <div class="mood-name">${mood.name}</div>
+        `;
+        
+        moodElement.addEventListener('click', () => {
+          // Select this mood
+          selectedMood = mood.id;
+          
+          // Update UI
+          document.querySelectorAll('.mood-item').forEach(el => {
+            el.classList.remove('selected');
+          });
+          moodElement.classList.add('selected');
+          
+          // Show details section
+          moodDetails.style.display = 'block';
+        });
+        
+        moodGrid.appendChild(moodElement);
+      });
+    }
+    
+    function renderMoodHistory() {
+      if (moodEntries.length === 0) {
+        moodHistory.innerHTML = `
+          <div class="no-entries">
+            <p>No mood entries recorded yet.</p>
+            <p>Start tracking your money mood by selecting an emotion above.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      moodHistory.innerHTML = '';
+      
+      moodEntries.forEach(entry => {
+        const mood = getMoodById(entry.moodId);
+        if (!mood) return;
+        
+        const entryElement = document.createElement('div');
+        entryElement.className = 'history-item';
+        
+        const date = new Date(entry.createdAt).toLocaleDateString();
+        
+        entryElement.innerHTML = `
+          <div class="history-header">
+            <div class="mood-chip">
+              <span class="history-emoji">${mood.emoji}</span>
+              <span>${mood.name}</span>
+            </div>
+            <span>${date}</span>
+          </div>
+          <div>Intensity: ${entry.intensity}</div>
+          ${entry.note ? `<p>${entry.note}</p>` : ''}
+        `;
+        
+        moodHistory.appendChild(entryElement);
+      });
+    }
+    
+    function resetMoodForm() {
+      selectedMood = null;
+      currentIntensity = 3;
+      moodNote.value = '';
+      
+      // Update UI
+      document.querySelectorAll('.mood-item').forEach(el => {
+        el.classList.remove('selected');
+      });
+      updateIntensityUI();
+      moodDetails.style.display = 'none';
+    }
+    
+    // Event listeners
+    refreshStatus.addEventListener('click', checkServerStatus);
+    
+    refreshHistory.addEventListener('click', loadMoodEntries);
+    
+    decreaseIntensity.addEventListener('click', () => {
+      if (currentIntensity > 1) {
+        currentIntensity--;
+        updateIntensityUI();
+      }
+    });
+    
+    increaseIntensity.addEventListener('click', () => {
+      if (currentIntensity < 5) {
+        currentIntensity++;
+        updateIntensityUI();
+      }
+    });
+    
+    intensityDots.addEventListener('click', (e) => {
+      const dot = e.target.closest('.intensity-dot');
+      if (dot) {
+        currentIntensity = parseInt(dot.dataset.level);
+        updateIntensityUI();
+      }
+    });
+    
+    submitMood.addEventListener('click', submitMoodEntry);
+    
+    // Initialize
+    async function initialize() {
+      const isConnected = await checkServerStatus();
+      if (isConnected) {
+        await loadMoods();
+        await loadMoodEntries();
+        updateIntensityUI();
+      }
+    }
+    
+    initialize();
+  </script>
+</body>
+</html>

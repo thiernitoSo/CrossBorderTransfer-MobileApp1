@@ -1,10 +1,11 @@
-// A simple Express server focused on the Money Mood Tracker feature
+// PostgreSQL-backed Money Mood Tracker server
 const express = require('express');
 const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const { Pool } = require('pg');
 
 // Define constants
 const PORT = 5000;
@@ -16,31 +17,14 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.static('public'));
 
-// In-memory storage for mood entries
-const moodEntries = [
-  {
-    id: '1',
-    userId: '1',
-    transactionId: '1',
-    moodId: 'happy',
-    intensity: 4,
-    note: 'Really pleased with how quickly the money was sent',
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '2',
-    userId: '1',
-    transactionId: '2',
-    moodId: 'anxious',
-    intensity: 3,
-    note: 'Waiting for confirmation is making me nervous',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+// PostgreSQL connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: true
   }
-];
+});
 
 // Available moods
 const availableMoods = [
@@ -54,13 +38,8 @@ const availableMoods = [
   { id: 'hopeful', name: 'Hopeful', emoji: '🤞', description: 'Optimistic about this transaction' }
 ];
 
-// Root route - redirect to mood tracker UI
+// Root route - HTML welcome page
 app.get('/', (req, res) => {
-  res.redirect('/mood-tracker.html');
-});
-
-// API documentation route
-app.get('/api-docs', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -77,11 +56,13 @@ app.get('/api-docs', (req, res) => {
         .delete { background-color: #E74C3C; }
         pre { background-color: #f9f9f9; padding: 10px; border-radius: 5px; overflow-x: auto; }
         .status { font-size: 20px; color: #27AE60; margin: 20px 0; }
+        .db-status { font-weight: bold; }
       </style>
     </head>
     <body>
       <h1>Money Mood Tracker API</h1>
       <p class="status">Server is running on port ${PORT}</p>
+      <p class="db-status">Using PostgreSQL database</p>
       <p>The Money Mood Tracker API allows users to record their emotional responses to money transfers.</p>
       
       <h2>Available Endpoints</h2>
@@ -127,20 +108,37 @@ app.get('/api-docs', (req, res) => {
       
       <h2>Try it out</h2>
       <p>Make requests to these endpoints to interact with the Money Mood Tracker API.</p>
-      <p><a href="/">Go to Money Mood Tracker UI</a></p>
     </body>
     </html>
   `);
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'Money Mood Tracker API',
-    port: PORT,
-    timestamp: new Date().toISOString()
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check database connection
+    const dbResult = await pool.query('SELECT NOW()');
+    const dbTimestamp = dbResult.rows[0].now;
+    
+    res.json({
+      status: 'ok',
+      service: 'Money Mood Tracker API',
+      port: PORT,
+      database: 'connected',
+      dbTimestamp,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({
+      status: 'error',
+      service: 'Money Mood Tracker API',
+      port: PORT,
+      database: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Get available moods
@@ -152,18 +150,31 @@ app.get('/api/moods', (req, res) => {
 });
 
 // Get mood entries for a user
-app.get('/api/mood-entries/:userId', (req, res) => {
+app.get('/api/mood-entries/:userId', async (req, res) => {
   const userId = req.params.userId;
-  const userMoodEntries = moodEntries.filter(entry => entry.userId === userId);
   
-  res.json({
-    success: true,
-    data: userMoodEntries
-  });
+  try {
+    const result = await pool.query(
+      'SELECT * FROM mood_entries WHERE user_id = $1 ORDER BY created_at DESC',
+      [userId]
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error getting mood entries:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve mood entries',
+      error: error.message
+    });
+  }
 });
 
 // Create a mood entry
-app.post('/api/mood-entries', (req, res) => {
+app.post('/api/mood-entries', async (req, res) => {
   const { userId, transactionId, moodId, intensity, note } = req.body;
   
   if (!userId || !moodId) {
@@ -182,75 +193,110 @@ app.post('/api/mood-entries', (req, res) => {
     });
   }
   
-  const newEntry = {
-    id: uuidv4(),
-    userId,
-    transactionId,
-    moodId,
-    intensity: intensity || 3,
-    note: note || '',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  moodEntries.push(newEntry);
-  
-  res.status(201).json({
-    success: true,
-    data: newEntry
-  });
+  try {
+    const result = await pool.query(
+      `INSERT INTO mood_entries 
+       (user_id, transaction_id, mood_id, intensity, note, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+       RETURNING *`,
+      [userId, transactionId, moodId, intensity || 3, note || '']
+    );
+    
+    const newEntry = result.rows[0];
+    
+    res.status(201).json({
+      success: true,
+      data: newEntry
+    });
+  } catch (error) {
+    console.error('Error creating mood entry:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create mood entry',
+      error: error.message
+    });
+  }
 });
 
 // Get mood entries for a specific transaction
-app.get('/api/mood-entries/transaction/:transactionId', (req, res) => {
+app.get('/api/mood-entries/transaction/:transactionId', async (req, res) => {
   const transactionId = req.params.transactionId;
-  const transactionMoods = moodEntries.filter(entry => entry.transactionId === transactionId);
   
-  res.json({
-    success: true,
-    data: transactionMoods
-  });
+  try {
+    const result = await pool.query(
+      'SELECT * FROM mood_entries WHERE transaction_id = $1 ORDER BY created_at DESC',
+      [transactionId]
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error getting transaction mood entries:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve transaction mood entries',
+      error: error.message
+    });
+  }
 });
 
 // Get mood statistics for a user
-app.get('/api/mood-stats/:userId', (req, res) => {
+app.get('/api/mood-stats/:userId', async (req, res) => {
   const userId = req.params.userId;
-  const userMoodEntries = moodEntries.filter(entry => entry.userId === userId);
   
-  // Calculate mood distribution
-  const moodDistribution = {};
-  availableMoods.forEach(mood => {
-    moodDistribution[mood.id] = 0;
-  });
-  
-  userMoodEntries.forEach(entry => {
-    moodDistribution[entry.moodId] = (moodDistribution[entry.moodId] || 0) + 1;
-  });
-  
-  // Calculate average intensity
-  const totalIntensity = userMoodEntries.reduce((sum, entry) => sum + entry.intensity, 0);
-  const averageIntensity = userMoodEntries.length > 0 ? totalIntensity / userMoodEntries.length : 0;
-  
-  // Most common mood
-  let mostCommonMood = null;
-  let maxCount = 0;
-  
-  Object.entries(moodDistribution).forEach(([moodId, count]) => {
-    if (count > maxCount) {
-      maxCount = count;
-      mostCommonMood = moodId;
-    }
-  });
-  
-  res.json({
-    success: true,
-    data: {
-      totalEntries: userMoodEntries.length,
-      moodDistribution,
-      averageIntensity,
-      mostCommonMood
-    }
-  });
+  try {
+    // Get all mood entries for the user
+    const entriesResult = await pool.query(
+      'SELECT * FROM mood_entries WHERE user_id = $1',
+      [userId]
+    );
+    
+    const userMoodEntries = entriesResult.rows;
+    
+    // Calculate mood distribution
+    const moodDistribution = {};
+    availableMoods.forEach(mood => {
+      moodDistribution[mood.id] = 0;
+    });
+    
+    userMoodEntries.forEach(entry => {
+      moodDistribution[entry.mood_id] = (moodDistribution[entry.mood_id] || 0) + 1;
+    });
+    
+    // Calculate average intensity
+    const totalIntensity = userMoodEntries.reduce((sum, entry) => sum + entry.intensity, 0);
+    const averageIntensity = userMoodEntries.length > 0 ? totalIntensity / userMoodEntries.length : 0;
+    
+    // Most common mood
+    let mostCommonMood = null;
+    let maxCount = 0;
+    
+    Object.entries(moodDistribution).forEach(([moodId, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        mostCommonMood = moodId;
+      }
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        totalEntries: userMoodEntries.length,
+        moodDistribution,
+        averageIntensity,
+        mostCommonMood
+      }
+    });
+  } catch (error) {
+    console.error('Error getting mood statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve mood statistics',
+      error: error.message
+    });
+  }
 });
 
 // Start the server

@@ -2,10 +2,13 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from '../shared/schema';
 
-const DATABASE_URL = `postgresql://neondb_owner:npg_3ThurtG0lVZy@ep-lively-frog-a6oqflji.us-west-2.aws.neon.tech/neondb?sslmode=require`;
+// Use the environment variable for the database connection
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
 
 export const pool = new Pool({
-  connectionString: DATABASE_URL,
+  connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: true
   },

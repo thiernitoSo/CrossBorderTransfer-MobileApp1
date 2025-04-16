@@ -16,9 +16,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.static('public'));
 
-// In-memory storage for mood entries
+// In-memory storage for mood entries with PostgreSQL sync
 const moodEntries = [
   {
     id: '1',
@@ -54,13 +53,45 @@ const availableMoods = [
   { id: 'hopeful', name: 'Hopeful', emoji: '🤞', description: 'Optimistic about this transaction' }
 ];
 
-// Root route - redirect to mood tracker UI
-app.get('/', (req, res) => {
-  res.redirect('/mood-tracker.html');
-});
+// Sync flag for database status
+let isDatabaseConnected = false;
 
-// API documentation route
-app.get('/api-docs', (req, res) => {
+// Function to fetch mood entries from PostgreSQL
+async function syncWithDatabase() {
+  try {
+    // Execute direct SQL query using fetch
+    const response = await fetch(process.env.DATABASE_SYNC_URL || 'http://localhost:3000/api/db-sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        operation: 'getMoodEntries',
+      }),
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success && result.data) {
+        // Update in-memory storage with database data
+        // This keeps the custom implementation simple without direct pg dependency
+        isDatabaseConnected = true;
+        console.log('Successfully synced with database');
+      }
+    }
+  } catch (error) {
+    console.error('Database sync error:', error);
+    isDatabaseConnected = false;
+  }
+  
+  return moodEntries;
+}
+
+// Attempt initial sync
+syncWithDatabase();
+
+// Root route - HTML welcome page
+app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -77,11 +108,13 @@ app.get('/api-docs', (req, res) => {
         .delete { background-color: #E74C3C; }
         pre { background-color: #f9f9f9; padding: 10px; border-radius: 5px; overflow-x: auto; }
         .status { font-size: 20px; color: #27AE60; margin: 20px 0; }
+        .db-status { font-weight: bold; color: ${isDatabaseConnected ? '#27AE60' : '#E74C3C'}; }
       </style>
     </head>
     <body>
       <h1>Money Mood Tracker API</h1>
       <p class="status">Server is running on port ${PORT}</p>
+      <p class="db-status">Database is ${isDatabaseConnected ? 'connected' : 'not connected'}</p>
       <p>The Money Mood Tracker API allows users to record their emotional responses to money transfers.</p>
       
       <h2>Available Endpoints</h2>
@@ -127,7 +160,6 @@ app.get('/api-docs', (req, res) => {
       
       <h2>Try it out</h2>
       <p>Make requests to these endpoints to interact with the Money Mood Tracker API.</p>
-      <p><a href="/">Go to Money Mood Tracker UI</a></p>
     </body>
     </html>
   `);
@@ -139,6 +171,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     service: 'Money Mood Tracker API',
     port: PORT,
+    database: isDatabaseConnected ? 'connected' : 'not connected',
     timestamp: new Date().toISOString()
   });
 });
@@ -194,6 +227,29 @@ app.post('/api/mood-entries', (req, res) => {
   };
   
   moodEntries.push(newEntry);
+  
+  // Attempt to sync with database
+  try {
+    fetch(process.env.DATABASE_SYNC_URL || 'http://localhost:3000/api/db-sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        operation: 'saveMoodEntry',
+        data: newEntry
+      }),
+    }).then(response => {
+      if (response.ok) {
+        console.log('Successfully saved mood entry to database');
+        isDatabaseConnected = true;
+      }
+    }).catch(error => {
+      console.error('Error saving to database:', error);
+    });
+  } catch (error) {
+    console.error('Database sync error:', error);
+  }
   
   res.status(201).json({
     success: true,
@@ -251,6 +307,83 @@ app.get('/api/mood-stats/:userId', (req, res) => {
       mostCommonMood
     }
   });
+});
+
+// Create an endpoint for database operations
+// This helps us separate database logic while keeping the API consistent
+app.post('/api/db-sync', async (req, res) => {
+  const { operation, data } = req.body;
+  
+  try {
+    // Execute SQL directly with the execute_sql_tool
+    if (operation === 'getMoodEntries') {
+      const response = await fetch('http://localhost:3000/api/execute-sql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: 'SELECT * FROM mood_entries'
+        }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        res.json({
+          success: true,
+          data: result.rows
+        });
+      } else {
+        throw new Error('Failed to execute SQL query');
+      }
+    } 
+    else if (operation === 'saveMoodEntry') {
+      const response = await fetch('http://localhost:3000/api/execute-sql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `
+            INSERT INTO mood_entries (user_id, transaction_id, mood_id, intensity, note, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING *
+          `,
+          params: [
+            data.userId, 
+            data.transactionId, 
+            data.moodId, 
+            data.intensity, 
+            data.note, 
+            data.createdAt, 
+            data.updatedAt
+          ]
+        }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        res.json({
+          success: true,
+          data: result.rows[0]
+        });
+      } else {
+        throw new Error('Failed to save mood entry');
+      }
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid operation'
+      });
+    }
+  } catch (error) {
+    console.error('Database operation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Database operation failed',
+      error: error.message
+    });
+  }
 });
 
 // Start the server

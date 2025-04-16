@@ -8,9 +8,9 @@ import {
   TextInput, 
   Alert, 
   Animated,
-  Dimensions,
-  RefreshControl
+  Dimensions
 } from 'react-native';
+
 import { Card, Button, Icon, Divider, Chip, ActivityIndicator, IconButton } from 'react-native-paper';
 import { useAuth } from '../../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -261,19 +261,24 @@ const MoneyMoodTracker: React.FC<{ transactionId?: string }> = ({ transactionId 
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={['#00b0ff']}
-          tintColor="#00b0ff"
-          title="Refreshing mood data..."
-          titleColor="#666"
-        />
-      }
-    >
+    <View style={{ flex: 1 }}>
+      {refreshing && (
+        <View style={styles.refreshIndicator}>
+          <ActivityIndicator size="small" color="#00b0ff" />
+          <Text style={styles.refreshText}>Refreshing data...</Text>
+        </View>
+      )}
+      <ScrollView 
+        style={styles.container}
+        onScroll={({ nativeEvent }) => {
+          // Simple pull-to-refresh implementation
+          const { contentOffset } = nativeEvent;
+          if (contentOffset.y <= -50 && !refreshing) {
+            onRefresh();
+          }
+        }}
+        scrollEventThrottle={400}
+      >
       <Card style={styles.card}>
         <Card.Title 
           title="Money Mood Tracker" 
@@ -472,6 +477,7 @@ const MoneyMoodTracker: React.FC<{ transactionId?: string }> = ({ transactionId 
         </Card>
       )}
     </ScrollView>
+    </View>
   );
 };
 
@@ -724,6 +730,24 @@ const styles = StyleSheet.create({
   divider: {
     marginTop: 10,
     height: 0,
+  },
+  refreshIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 176, 255, 0.1)',
+    paddingVertical: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  refreshText: {
+    marginLeft: 8,
+    color: '#00b0ff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 
