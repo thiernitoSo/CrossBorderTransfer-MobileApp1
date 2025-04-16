@@ -32,6 +32,7 @@ export default function AuthenticatedLayout() {
         <Stack.Screen name="beneficiaries" />
         <Stack.Screen name="transactions" />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="money-mood" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="add-beneficiary" />
         <Stack.Screen name="edit-beneficiary" />

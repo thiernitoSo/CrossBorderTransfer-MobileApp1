@@ -45,6 +45,77 @@ class MemStorage {
     this.seedTestData();
   }
   
+  // Mood entry methods
+  async createMoodEntry(data) {
+    const newMoodEntry = {
+      id: uuidv4(),
+      userId: data.userId,
+      transactionId: data.transactionId || null,
+      moodId: data.moodId || '',
+      note: data.note || '',
+      createdAt: new Date().toISOString(),
+      ...data
+    };
+    
+    this.moodEntries.push(newMoodEntry);
+    return newMoodEntry;
+  }
+  
+  async getMoodEntry(id) {
+    return this.moodEntries.find(m => m.id === id) || null;
+  }
+  
+  async updateMoodEntry(id, data) {
+    const index = this.moodEntries.findIndex(m => m.id === id);
+    if (index === -1) throw new Error('Mood entry not found');
+    
+    this.moodEntries[index] = { 
+      ...this.moodEntries[index], 
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    return this.moodEntries[index];
+  }
+  
+  async getMoodEntriesByUserId(userId) {
+    return this.moodEntries
+      .filter(m => m.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getMoodEntriesByTransactionId(transactionId) {
+    return this.moodEntries
+      .filter(m => m.transactionId === transactionId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getMoodStatistics(userId) {
+    const userMoods = await this.getMoodEntriesByUserId(userId);
+    
+    // Count occurrences of each mood
+    const moodCounts = userMoods.reduce((acc, mood) => {
+      acc[mood.moodId] = (acc[mood.moodId] || 0) + 1;
+      return acc;
+    }, {});
+    
+    // Find most frequent mood
+    let mostFrequentMood = null;
+    let maxCount = 0;
+    
+    for (const [moodId, count] of Object.entries(moodCounts)) {
+      if (count > maxCount) {
+        mostFrequentMood = moodId;
+        maxCount = count;
+      }
+    }
+    
+    return {
+      mostFrequentMood,
+      moodCounts,
+      recentMoods: userMoods.slice(0, 5), // Last 5 mood entries
+    };
+  }
+  
   seedTestData() {
     // Create a test user
     this.users.push({
@@ -618,6 +689,109 @@ app.delete('/api/beneficiaries/:id', async (req, res) => {
   } catch (error) {
     console.error('Delete beneficiary error:', error);
     res.status(500).json({ message: 'Failed to delete beneficiary' });
+  }
+});
+
+// Mood tracker routes
+app.get('/api/moods', async (req, res) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  
+  try {
+    const moods = await storage.getMoodEntriesByUserId(req.user.id);
+    res.json(moods);
+  } catch (error) {
+    console.error('Get moods error:', error);
+    res.status(500).json({ message: 'Failed to get mood entries' });
+  }
+});
+
+app.get('/api/moods/:id', async (req, res) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  
+  try {
+    const mood = await storage.getMoodEntry(req.params.id);
+    
+    if (!mood) {
+      return res.status(404).json({ message: 'Mood entry not found' });
+    }
+    
+    if (mood.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to access this mood entry' });
+    }
+    
+    res.json(mood);
+  } catch (error) {
+    console.error('Get mood entry error:', error);
+    res.status(500).json({ message: 'Failed to get mood entry' });
+  }
+});
+
+app.post('/api/moods', async (req, res) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  
+  try {
+    const newMood = await storage.createMoodEntry({
+      ...req.body,
+      userId: req.user.id
+    });
+    
+    res.status(201).json(newMood);
+  } catch (error) {
+    console.error('Create mood entry error:', error);
+    res.status(500).json({ message: 'Failed to create mood entry' });
+  }
+});
+
+app.put('/api/moods/:id', async (req, res) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  
+  try {
+    const mood = await storage.getMoodEntry(req.params.id);
+    
+    if (!mood) {
+      return res.status(404).json({ message: 'Mood entry not found' });
+    }
+    
+    if (mood.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to update this mood entry' });
+    }
+    
+    const updatedMood = await storage.updateMoodEntry(req.params.id, req.body);
+    res.json(updatedMood);
+  } catch (error) {
+    console.error('Update mood entry error:', error);
+    res.status(500).json({ message: 'Failed to update mood entry' });
+  }
+});
+
+app.get('/api/moods/transaction/:transactionId', async (req, res) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  
+  try {
+    const moods = await storage.getMoodEntriesByTransactionId(req.params.transactionId);
+    
+    // Check if user owns at least one of these mood entries
+    const transaction = await storage.getTransaction(req.params.transactionId);
+    if (!transaction || transaction.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to access moods for this transaction' });
+    }
+    
+    res.json(moods);
+  } catch (error) {
+    console.error('Get transaction moods error:', error);
+    res.status(500).json({ message: 'Failed to get mood entries for transaction' });
+  }
+});
+
+app.get('/api/moods/statistics', async (req, res) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  
+  try {
+    const statistics = await storage.getMoodStatistics(req.user.id);
+    res.json(statistics);
+  } catch (error) {
+    console.error('Get mood statistics error:', error);
+    res.status(500).json({ message: 'Failed to get mood statistics' });
   }
 });
 

@@ -1,154 +1,105 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { Text, Card } from 'react-native-paper';
-import { Feather } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { View, TouchableOpacity, StyleSheet, Animated, Text } from 'react-native';
+import { Card, Title } from 'react-native-paper';
+import { availableMoods, Mood } from '../../services/mood';
 import theme from '../../constants/theme';
 
-// Mood types and their related data
-export interface Mood {
-  id: string;
-  emoji: string;
-  label: string;
-  color: string;
-  description: string;
-}
-
-export const moods: Mood[] = [
-  {
-    id: 'excited',
-    emoji: '😃',
-    label: 'Excited',
-    color: theme.colors.success,
-    description: 'Feeling positive about your financial decisions'
-  },
-  {
-    id: 'satisfied',
-    emoji: '😊',
-    label: 'Satisfied',
-    color: '#4CAF50',
-    description: 'Content with your current financial activity'
-  },
-  {
-    id: 'neutral',
-    emoji: '😐',
-    label: 'Neutral',
-    color: '#FFC107',
-    description: 'Neither positive nor negative about your finances'
-  },
-  {
-    id: 'concerned',
-    emoji: '😟',
-    label: 'Concerned',
-    color: '#FF9800',
-    description: 'Slightly worried about your financial decisions'
-  },
-  {
-    id: 'anxious',
-    emoji: '😰',
-    label: 'Anxious',
-    color: theme.colors.error,
-    description: 'Experiencing financial stress or worry'
-  },
-];
-
 interface MoneyMoodTrackerProps {
-  onMoodSelected?: (mood: Mood) => void;
-  initialMood?: string;
+  onMoodSelected: (mood: Mood) => void;
   transactionAmount?: number;
   transactionCurrency?: string;
 }
 
-const MoneyMoodTracker: React.FC<MoneyMoodTrackerProps> = ({
+const MoneyMoodTracker: React.FC<MoneyMoodTrackerProps> = ({ 
   onMoodSelected,
-  initialMood,
   transactionAmount,
-  transactionCurrency,
+  transactionCurrency
 }) => {
-  const [selectedMood, setSelectedMood] = useState<Mood | null>(
-    initialMood ? moods.find(mood => mood.id === initialMood) || null : null
-  );
+  const [selectedMoodId, setSelectedMoodId] = useState<string | null>(null);
   
-  // Animation values for each mood
-  const animationValues = moods.map(() => new Animated.Value(1));
+  // Animation values for each mood item
+  const scaleAnimations = availableMoods.map(() => new Animated.Value(1));
+  const opacityAnimations = availableMoods.map(() => new Animated.Value(0.7));
   
-  // Handle mood selection
-  const handleMoodSelect = (mood: Mood, index: number) => {
-    setSelectedMood(mood);
+  const handleMoodPress = (mood: Mood, index: number) => {
+    // Reset previous animations
+    if (selectedMoodId !== null) {
+      const prevIndex = availableMoods.findIndex(m => m.id === selectedMoodId);
+      if (prevIndex !== -1) {
+        Animated.parallel([
+          Animated.spring(scaleAnimations[prevIndex], {
+            toValue: 1,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnimations[prevIndex], {
+            toValue: 0.7,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    }
     
     // Animate the selected mood
-    Animated.sequence([
-      Animated.timing(animationValues[index], {
-        toValue: 1.3,
-        duration: 200,
+    Animated.parallel([
+      Animated.spring(scaleAnimations[index], {
+        toValue: 1.2,
+        friction: 4,
         useNativeDriver: true,
       }),
-      Animated.timing(animationValues[index], {
+      Animated.timing(opacityAnimations[index], {
         toValue: 1,
         duration: 200,
         useNativeDriver: true,
       }),
     ]).start();
     
-    // Call the callback if provided
-    if (onMoodSelected) {
-      onMoodSelected(mood);
-    }
+    setSelectedMoodId(mood.id);
+    onMoodSelected(mood);
   };
   
-  // Get a suggestion based on mood and transaction amount
-  const getMoodSuggestion = (): string => {
-    if (!selectedMood || !transactionAmount) return '';
+  const formatCurrency = (amount?: number, currency?: string) => {
+    if (amount === undefined || currency === undefined) return '';
     
-    switch (selectedMood.id) {
-      case 'excited':
-        return 'Great! Consider setting up regular transfers to build consistent support.';
-      case 'satisfied':
-        return 'Nice work! Your financial decisions appear to be on track.';
-      case 'neutral':
-        return 'It\'s okay to feel neutral. Consider reviewing your transfer goals.';
-      case 'concerned':
-        return 'If you\'re concerned, try breaking your transfers into smaller amounts.';
-      case 'anxious':
-        return 'It\'s normal to feel anxious. Consider talking to our support team for guidance.';
-      default:
-        return '';
-    }
+    return new Intl.NumberFormat('en-CA', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
   };
   
-  const getAmountImpactMessage = (): string => {
-    if (!transactionAmount) return '';
-    
-    if (transactionAmount < 50) {
-      return 'This is a small transfer, which is a good way to start.';
-    } else if (transactionAmount < 200) {
-      return 'This is a moderate transfer amount.';
-    } else {
-      return 'This is a significant transfer. Make sure it aligns with your financial plan.';
-    }
-  };
-
   return (
     <Card style={styles.container}>
       <Card.Content>
-        <Text style={styles.title}>How do you feel about this transfer?</Text>
+        <Title style={styles.title}>How do you feel about this transfer?</Title>
         
-        <View style={styles.moodContainer}>
-          {moods.map((mood, index) => (
-            <Animated.View 
+        {transactionAmount !== undefined && (
+          <View style={styles.transactionInfo}>
+            <Text style={styles.transactionText}>
+              Most recent transfer: {formatCurrency(transactionAmount, transactionCurrency)}
+            </Text>
+          </View>
+        )}
+        
+        <View style={styles.moodGrid}>
+          {availableMoods.map((mood, index) => (
+            <Animated.View
               key={mood.id}
-              style={{ 
-                transform: [{ scale: animationValues[index] }],
-              }}
+              style={[
+                styles.moodItemContainer,
+                {
+                  transform: [{ scale: scaleAnimations[index] }],
+                  opacity: opacityAnimations[index],
+                }
+              ]}
             >
               <TouchableOpacity
                 style={[
-                  styles.moodButton,
-                  selectedMood?.id === mood.id && {
-                    borderColor: mood.color,
-                    backgroundColor: mood.color + '10', // 10% opacity
-                  },
+                  styles.moodItem,
+                  selectedMoodId === mood.id ? { borderColor: mood.color, borderWidth: 2 } : {}
                 ]}
-                onPress={() => handleMoodSelect(mood, index)}
+                onPress={() => handleMoodPress(mood, index)}
+                activeOpacity={0.6}
               >
                 <Text style={styles.moodEmoji}>{mood.emoji}</Text>
                 <Text style={styles.moodLabel}>{mood.label}</Text>
@@ -156,31 +107,6 @@ const MoneyMoodTracker: React.FC<MoneyMoodTrackerProps> = ({
             </Animated.View>
           ))}
         </View>
-        
-        {selectedMood && (
-          <View style={styles.feedbackContainer}>
-            <View style={[styles.moodIndicator, { backgroundColor: selectedMood.color }]} />
-            <Text style={styles.feedbackText}>{selectedMood.description}</Text>
-            
-            {transactionAmount && (
-              <View style={styles.suggestionContainer}>
-                <Feather name="info" size={16} color={theme.colors.primary} style={styles.infoIcon} />
-                <Text style={styles.suggestionText}>
-                  {getMoodSuggestion()}
-                </Text>
-              </View>
-            )}
-            
-            {transactionAmount && (
-              <View style={styles.suggestionContainer}>
-                <Feather name="dollar-sign" size={16} color={theme.colors.primary} style={styles.infoIcon} />
-                <Text style={styles.suggestionText}>
-                  {getAmountImpactMessage()}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
       </Card.Content>
     </Card>
   );
@@ -192,69 +118,48 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness.medium,
   },
   title: {
-    fontSize: theme.fontSizes.md,
+    fontSize: 18,
     fontWeight: theme.fontWeights.semibold,
     marginBottom: theme.spacing.md,
     textAlign: 'center',
   },
-  moodContainer: {
+  transactionInfo: {
+    marginBottom: theme.spacing.md,
+    alignItems: 'center',
+  },
+  transactionText: {
+    fontSize: 14,
+    color: theme.colors.textLight,
+  },
+  moodGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    marginTop: theme.spacing.sm,
+  },
+  moodItemContainer: {
+    width: '23%',
     marginBottom: theme.spacing.md,
   },
-  moodButton: {
-    alignItems: 'center',
+  moodItem: {
+    borderRadius: 50, // Fully rounded
     padding: theme.spacing.sm,
-    borderRadius: theme.roundness.large
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    width: 60,
-    height: 80,
-    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   moodEmoji: {
     fontSize: 24,
     marginBottom: 4,
   },
   moodLabel: {
-    fontSize: theme.fontSizes.xs,
+    fontSize: 12,
     textAlign: 'center',
-  },
-  feedbackContainer: {
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness.medium,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.primary,
-  },
-  moodIndicator: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    borderTopLeftRadius: theme.roundness.medium,
-    borderBottomLeftRadius: theme.roundness.medium,
-  },
-  feedbackText: {
-    fontSize: theme.fontSizes.sm,
     color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  suggestionContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: theme.spacing.sm,
-  },
-  infoIcon: {
-    marginRight: theme.spacing.xs,
-    marginTop: 2,
-  },
-  suggestionText: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.textLight,
-    flex: 1,
   },
 });
 

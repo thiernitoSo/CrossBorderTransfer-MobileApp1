@@ -70,10 +70,13 @@ export interface TransactionStats {
  * Get all transactions for the current user
  */
 export const getTransactions = async (page: number = 1, limit: number = 10): Promise<{
-  data: Transaction[];
-  total: number;
-  page: number;
-  pages: number;
+  transactions: Transaction[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }> => {
   try {
     return await get('/api/transactions', { page, limit });

@@ -20,6 +20,7 @@ const TabBar: React.FC = () => {
     { label: 'Send', icon: 'send', route: '/(authenticated)/send-money' },
     { label: 'Beneficiaries', icon: 'users', route: '/(authenticated)/beneficiaries' },
     { label: 'History', icon: 'clock', route: '/(authenticated)/transactions' },
+    { label: 'Mood', icon: 'smile', route: '/(authenticated)/money-mood' },
     { label: 'Profile', icon: 'user', route: '/(authenticated)/profile' },
   ];
 
