@@ -13,18 +13,13 @@ const apiClient: AxiosInstance = axios.create({
     'Accept': 'application/json',
   },
   timeout: 30000, // 30 seconds timeout
+  withCredentials: true, // Important for cookie-based sessions
 });
 
-// Add request interceptor to include auth token in requests
+// Since we're using session-based auth with cookies, we don't need to add auth tokens
 apiClient.interceptors.request.use(
   async (config) => {
-    // Get token from secure storage
-    const token = await getSecureValue(SECURE_STORAGE_KEYS.ACCESS_TOKEN);
-    
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    
+    // Cookies will be automatically included due to withCredentials: true
     return config;
   },
   (error) => {
@@ -32,51 +27,13 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Add response interceptor to handle token refresh
+// Simple error handling response interceptor
 apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error) => {
-    const originalRequest = error.config;
-    
-    // If error is 401 (Unauthorized) and not a retry
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        // Get refresh token
-        const refreshToken = await getSecureValue(SECURE_STORAGE_KEYS.REFRESH_TOKEN);
-        
-        if (!refreshToken) {
-          // No refresh token, logout user
-          return Promise.reject(error);
-        }
-        
-        // Attempt to refresh token
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-          refreshToken,
-        });
-        
-        // Save new tokens
-        await SecureStore.setItemAsync(
-          SECURE_STORAGE_KEYS.ACCESS_TOKEN,
-          response.data.accessToken
-        );
-        await SecureStore.setItemAsync(
-          SECURE_STORAGE_KEYS.REFRESH_TOKEN,
-          response.data.refreshToken
-        );
-        
-        // Retry original request with new token
-        originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        // Token refresh failed, logout user
-        return Promise.reject(refreshError);
-      }
-    }
-    
+    // Let the handler handle all errors
     return Promise.reject(error);
   }
 );

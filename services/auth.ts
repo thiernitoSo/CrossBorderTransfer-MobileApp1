@@ -57,16 +57,16 @@ export const login = async (credentials: LoginCredentials): Promise<User> => {
  */
 export const register = async (userData: RegisterData): Promise<User> => {
   try {
-    const response = await apiService.post<AuthResponse>('/auth/register', userData);
+    // Use the Express server's register endpoint which uses sessions
+    const user = await apiService.post<User>('/register', userData);
     
-    // Save tokens to secure storage
-    await saveSecureValue(SECURE_STORAGE_KEYS.ACCESS_TOKEN, response.accessToken);
-    await saveSecureValue(SECURE_STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
+    // Store a placeholder token to indicate authenticated state
+    await saveSecureValue(SECURE_STORAGE_KEYS.ACCESS_TOKEN, 'session-auth');
     
     // Save user data to storage
-    await storeData(STORAGE_KEYS.USER_PROFILE, response.user);
+    await storeData(STORAGE_KEYS.USER_PROFILE, user);
     
-    return response.user;
+    return user;
   } catch (error) {
     console.error('Registration error:', error);
     throw error;
@@ -78,8 +78,8 @@ export const register = async (userData: RegisterData): Promise<User> => {
  */
 export const logout = async (): Promise<void> => {
   try {
-    // Call logout endpoint to invalidate tokens on server
-    await apiService.post('/auth/logout');
+    // Call logout endpoint to invalidate session on server
+    await apiService.post('/logout');
   } catch (error) {
     console.error('Logout API error:', error);
     // Continue with local logout even if server request fails
@@ -103,7 +103,7 @@ export const logout = async (): Promise<void> => {
  */
 export const getCurrentUser = async (): Promise<User> => {
   try {
-    return await apiService.get<User>('/auth/user');
+    return await apiService.get<User>('/user');
   } catch (error) {
     console.error('Get user profile error:', error);
     throw error;
