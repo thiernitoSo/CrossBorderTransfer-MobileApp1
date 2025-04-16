@@ -305,7 +305,8 @@ class MemStorage {
   }
 }
 
-const storage = new MemStorage();
+// Import the database storage implementation
+const { storage } = require('./server/storage');
 
 // Middleware
 app.use(express.json());
