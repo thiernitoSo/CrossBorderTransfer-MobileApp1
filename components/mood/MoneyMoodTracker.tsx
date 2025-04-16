@@ -8,9 +8,10 @@ import {
   TextInput, 
   Alert, 
   Animated,
-  Dimensions 
+  Dimensions,
+  RefreshControl
 } from 'react-native';
-import { Card, Button, Icon, Divider, Chip, ActivityIndicator } from 'react-native-paper';
+import { Card, Button, Icon, Divider, Chip, ActivityIndicator, IconButton } from 'react-native-paper';
 import { useAuth } from '../../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -52,6 +53,7 @@ const MoneyMoodTracker: React.FC<{ transactionId?: string }> = ({ transactionId 
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   
   // Animated values for mood selection
   const [emojiScale] = useState<Animated.Value[]>(
@@ -74,10 +76,16 @@ const MoneyMoodTracker: React.FC<{ transactionId?: string }> = ({ transactionId 
     }
   }, [selectedMood]);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadMoodEntries();
+    setRefreshing(false);
+  };
+
   const loadMoodEntries = async () => {
     if (!user?.id) return;
     
-    setLoading(true);
+    if (!refreshing) setLoading(true);
     try {
       let entries: MoodEntry[] = [];
       
@@ -243,10 +251,36 @@ const MoneyMoodTracker: React.FC<{ transactionId?: string }> = ({ transactionId 
     return moods.find(mood => mood.id === moodId);
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#00b0ff" />
+        <Text style={styles.loadingText}>Loading your mood data...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#00b0ff']}
+          tintColor="#00b0ff"
+          title="Refreshing mood data..."
+          titleColor="#666"
+        />
+      }
+    >
       <Card style={styles.card}>
-        <Card.Title title="Money Mood Tracker" subtitle="How does this transaction make you feel?" />
+        <Card.Title 
+          title="Money Mood Tracker" 
+          subtitle="How does this transaction make you feel?" 
+          titleStyle={styles.cardTitle}
+          subtitleStyle={styles.cardSubtitle}
+        />
         <Card.Content>
           <View style={styles.moodGrid}>
             {moods.map((mood, index) => (
@@ -347,9 +381,54 @@ const MoneyMoodTracker: React.FC<{ transactionId?: string }> = ({ transactionId 
         </Card.Content>
       </Card>
       
-      {moodEntries.length > 0 && (
+      {moodEntries.length === 0 ? (
         <Card style={[styles.card, { marginTop: 20 }]}>
-          <Card.Title title="Your Mood History" />
+          <Card.Content>
+            <View style={{ 
+              alignItems: 'center', 
+              padding: 24, 
+              justifyContent: 'center' 
+            }}>
+              <Icon source="emoticon-outline" size={48} color="#cccccc" />
+              <Text style={{ 
+                textAlign: 'center', 
+                marginTop: 16, 
+                color: '#666',
+                fontSize: 14,
+                lineHeight: 20
+              }}>
+                No mood entries recorded yet. Start tracking your money mood by selecting an emotion above.
+              </Text>
+              <Button 
+                mode="outlined" 
+                onPress={loadMoodEntries} 
+                style={{ marginTop: 16 }}
+                icon={() => <Icon source="refresh" size={16} color="#00b0ff" />}
+              >
+                Refresh
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
+      ) : (
+        <Card style={[styles.card, { marginTop: 20 }]}>
+          <Card.Title 
+            title="Your Mood History" 
+            titleStyle={styles.cardTitle}
+            subtitle={`${moodEntries.length} recorded mood entries`}
+            subtitleStyle={styles.cardSubtitle}
+            right={(props) => (
+              <IconButton 
+                {...props} 
+                icon={() => <Icon source="refresh" size={24} color="#00b0ff" />}
+                onPress={() => {
+                  // Show a loading feedback
+                  Alert.alert('Syncing', 'Refreshing mood entries from server...');
+                  loadMoodEntries();
+                }} 
+              />
+            )}
+          />
           <Card.Content>
             {moodEntries.map((entry) => {
               const mood = getMoodById(entry.moodId);
@@ -401,9 +480,34 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#757575',
+    fontSize: 16,
+  },
   card: {
-    borderRadius: 8,
+    borderRadius: 12,
     elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#0088aa',
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#666',
   },
   moodGrid: {
     flexDirection: 'row',
