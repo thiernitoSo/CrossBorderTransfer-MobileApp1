@@ -308,13 +308,32 @@ class MemStorage {
   }
 }
 
-// Initialize basic middleware first
+// Initialize session middleware first
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'sendafrika-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  store: new MemoryStore({
+    checkPeriod: 86400000 // 24 hours
+  }),
+  cookie: {
+    secure: false,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize passport after session
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Initialize other middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(express.static('public')); // Serve static files from the 'public' directory
-
-// Storage, session, and authentication will be set up in the startServer function
 console.log('Initializing storage...');
 const { getStorage } = require('./server/storage');
 let storage;
