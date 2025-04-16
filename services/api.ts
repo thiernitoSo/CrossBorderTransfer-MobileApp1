@@ -2,8 +2,8 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { getSecureValue, SECURE_STORAGE_KEYS } from '../utils/storage';
 import * as SecureStore from 'expo-secure-store';
 
-// API base URL - in production this would be your actual API endpoint
-const API_BASE_URL = 'http://localhost:8000/api';
+// API base URL
+const API_BASE_URL = 'http://localhost:5000/api';
 
 // Create axios instance with default config
 const apiClient: AxiosInstance = axios.create({
