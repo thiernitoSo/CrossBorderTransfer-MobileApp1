@@ -7,27 +7,6 @@ channel = "stable-24_05"
 runButton = "Project"
 
 [[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "MoodTrackerServer"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "MobileApp"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "SendAfrikaApp"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "MoodTrackerApp"
-
-[[workflows.workflow]]
 name = "Project "
 author = "agent"
 mode = "sequential"
