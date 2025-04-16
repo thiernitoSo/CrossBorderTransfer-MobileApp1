@@ -4,6 +4,7 @@ modules = ["nodejs-20", "postgresql-16"]
 channel = "stable-24_05"
 
 [workflows]
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project "
@@ -50,7 +51,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npx expo start --web --port 5000"
+args = "npx expo start --port 5000"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -69,7 +70,7 @@ args = "./run-sendafrika.sh"
 waitForPort = 5001
 
 [deployment]
-run = ["sh", "-c", "npx expo start --web --port 5000"]
+run = ["sh", "-c", "npx expo start --port 5000"]
 
 [[ports]]
 localPort = 5000
