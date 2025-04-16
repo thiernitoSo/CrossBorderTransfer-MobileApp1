@@ -308,9 +308,10 @@ class MemStorage {
   }
 }
 
-// Since we're having dependency issues with PostgreSQL, we'll use in-memory storage for now
+// Initialize the storage system
 console.log('Initializing storage...');
-const { storage } = require('./server/storage');
+const { getStorage } = require('./server/storage');
+let storage;
 
 // Middleware
 app.use(express.json());
@@ -358,19 +359,7 @@ function isAdmin(req, res, next) {
   next();
 }
 
-// Set up session
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'sendafrika-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  store: storage.sessionStore,
-  cookie: {
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
+// Session and authentication will be set up in async startServer function
 
 // Passport local strategy
 passport.use(new LocalStrategy(

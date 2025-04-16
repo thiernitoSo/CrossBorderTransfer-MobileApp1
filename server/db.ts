@@ -1,15 +1,53 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
-import * as schema from "@shared/schema";
+/**
+ * Database connection module for SendAfrika
+ * Supports both Neon PostgreSQL and regular PostgreSQL databases
+ * Gracefully handles missing modules
+ */
 
-neonConfig.webSocketConstructor = ws;
+// Define types for export
+export let pool: any = null;
+export let db: any = null;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+// Attempt to initialize database connection
+try {
+  // First attempt with @neondatabase/serverless
+  try {
+    const { Pool, neonConfig } = require('@neondatabase/serverless');
+    const { drizzle } = require('drizzle-orm/neon-serverless');
+    const ws = require('ws');
+    const schema = require('@shared/schema');
+
+    neonConfig.webSocketConstructor = ws;
+
+    if (process.env.DATABASE_URL) {
+      pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      db = drizzle({ client: pool, schema });
+      console.log('Connected to Neon PostgreSQL database');
+    }
+  } catch (neonError) {
+    console.log('Neon PostgreSQL client not available:', neonError.message);
+    
+    // Try regular PostgreSQL
+    try {
+      const { Pool } = require('pg');
+      const { drizzle } = require('drizzle-orm/pg-core');
+      const schema = require('@shared/schema');
+
+      if (process.env.DATABASE_URL) {
+        pool = new Pool({ 
+          connectionString: process.env.DATABASE_URL,
+          ssl: { rejectUnauthorized: false }
+        });
+        db = drizzle({ client: pool, schema });
+        console.log('Connected to PostgreSQL database');
+      }
+    } catch (pgError) {
+      console.log('PostgreSQL client not available:', pgError.message);
+    }
+  }
+} catch (error) {
+  console.log('Database module initialization failed:', error.message);
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+// Check if database is connected
+export const isDatabaseConnected = () => !!pool;

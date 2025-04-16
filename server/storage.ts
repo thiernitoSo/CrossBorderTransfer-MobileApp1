@@ -1167,4 +1167,26 @@ class DatabaseStorage implements IStorage {
 // Storage implementation choice
 // For now, we'll use MemStorage to avoid dependency issues with PostgreSQL
 // TODO: When we resolve PostgreSQL dependencies, switch to DatabaseStorage
-export const storage = new MemStorage();
+// Import the DB storage implementation
+import { DbStorage } from './db-storage';
+import { pool } from './db';
+
+// Determine which storage to use
+let storageImpl: IStorage;
+
+// Check if database credentials are available
+if (process.env.DATABASE_URL) {
+  console.log('Database URL found. Using PostgreSQL storage');
+  try {
+    storageImpl = new DbStorage(pool);
+  } catch (error) {
+    console.error('Error initializing PostgreSQL storage:', error);
+    console.log('Falling back to in-memory storage');
+    storageImpl = new MemStorage();
+  }
+} else {
+  console.log('No database URL found. Using in-memory storage');
+  storageImpl = new MemStorage();
+}
+
+export const storage = storageImpl;

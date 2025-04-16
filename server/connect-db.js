@@ -30,6 +30,7 @@ if (pg && hasDatabaseUrl()) {
       connectionString: process.env.DATABASE_URL,
       ssl: {
         rejectUnauthorized: false // Required for some PostgreSQL services like Neon
+        
       }
     });
     console.log('PostgreSQL pool initialized');
