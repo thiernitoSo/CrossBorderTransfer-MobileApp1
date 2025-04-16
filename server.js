@@ -1341,21 +1341,49 @@ if (openaiService) {
   });
 }
 
-// Start the server
-// Catch-all route to serve the SPA for any non-API routes
-app.get('*', (req, res) => {
-  // Don't handle API routes here
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ message: 'API endpoint not found' });
+// Async function to start the server
+async function startServer() {
+  try {
+    // Initialize storage
+    storage = await getStorage();
+    
+    // Set up session and authentication now that storage is initialized
+    app.use(session({
+      secret: process.env.SESSION_SECRET || 'sendafrika-secret-key',
+      resave: false,
+      saveUninitialized: false,
+      store: storage.sessionStore,
+      cookie: {
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      }
+    }));
+    
+    app.use(passport.initialize());
+    app.use(passport.session());
+    
+    // Catch-all route to serve the SPA for any non-API routes
+    app.get('*', (req, res) => {
+      // Don't handle API routes here
+      if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ message: 'API endpoint not found' });
+      }
+      
+      // Send the index.html file for all other routes
+      res.sendFile('index.html', { root: './public' });
+    });
+    
+    // Start the server
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server is running on http://0.0.0.0:${PORT}`);
+      console.log(`Access the application at: https://workspace.thiernosow.repl.co`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
-  
-  // Send the index.html file for all other routes
-  res.sendFile('index.html', { root: './public' });
-});
+}
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on http://0.0.0.0:${PORT}`);
-  console.log(`Access the application at: https://workspace.thiernosow.repl.co`);
-});
+// Start the server
+startServer();
 
 module.exports = app;
