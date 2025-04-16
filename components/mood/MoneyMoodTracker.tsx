@@ -52,11 +52,27 @@ const MoneyMoodTracker: React.FC<{ transactionId?: string }> = ({ transactionId 
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  
+  // Animated values for mood selection
+  const [emojiScale] = useState<Animated.Value[]>(
+    moods.map(() => new Animated.Value(1))
+  );
+  const [selectionAnim] = useState(new Animated.Value(0));
 
   // Load existing mood entries from server with AsyncStorage fallback
   useEffect(() => {
     loadMoodEntries();
   }, [user?.id]);
+  
+  // Reset animations when selectedMood is cleared
+  useEffect(() => {
+    if (selectedMood === null) {
+      // Reset all emoji scales
+      emojiScale.forEach(scale => scale.setValue(1));
+      // Reset selection animation
+      selectionAnim.setValue(0);
+    }
+  }, [selectedMood]);
 
   const loadMoodEntries = async () => {
     if (!user?.id) return;
@@ -107,7 +123,31 @@ const MoneyMoodTracker: React.FC<{ transactionId?: string }> = ({ transactionId 
     }
   };
 
-  const handleSelectMood = (moodId: string) => {
+  const handleSelectMood = (moodId: string, index: number) => {
+    // Animate the selected emoji
+    Animated.sequence([
+      // First scale up
+      Animated.timing(emojiScale[index], {
+        toValue: 1.5,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      // Then scale back down slightly
+      Animated.timing(emojiScale[index], {
+        toValue: 1.2,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // Animate the details section appearance
+    Animated.spring(selectionAnim, {
+      toValue: 1,
+      friction: 7,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+    
     setSelectedMood(moodId);
   };
 
@@ -209,23 +249,48 @@ const MoneyMoodTracker: React.FC<{ transactionId?: string }> = ({ transactionId 
         <Card.Title title="Money Mood Tracker" subtitle="How does this transaction make you feel?" />
         <Card.Content>
           <View style={styles.moodGrid}>
-            {moods.map((mood) => (
+            {moods.map((mood, index) => (
               <TouchableOpacity
                 key={mood.id}
                 style={[
                   styles.moodItem,
                   selectedMood === mood.id && styles.selectedMood
                 ]}
-                onPress={() => handleSelectMood(mood.id)}
+                onPress={() => handleSelectMood(mood.id, index)}
               >
-                <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+                <Animated.Text 
+                  style={[
+                    styles.moodEmoji, 
+                    { 
+                      transform: [
+                        { scale: emojiScale[index] }
+                      ] 
+                    }
+                  ]}
+                >
+                  {mood.emoji}
+                </Animated.Text>
                 <Text style={styles.moodName}>{mood.name}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
           {selectedMood && (
-            <View style={styles.detailsSection}>
+            <Animated.View 
+              style={[
+                styles.detailsSection, 
+                {
+                  opacity: selectionAnim,
+                  transform: [
+                    { translateY: selectionAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0]
+                      })
+                    }
+                  ]
+                }
+              ]}
+            >
               <Text style={styles.sectionTitle}>Intensity</Text>
               <View style={styles.intensityContainer}>
                 <TouchableOpacity onPress={() => handleIntensityChange(intensity - 1)}>
@@ -277,7 +342,7 @@ const MoneyMoodTracker: React.FC<{ transactionId?: string }> = ({ transactionId 
               >
                 Record My Mood
               </Button>
-            </View>
+            </Animated.View>
           )}
         </Card.Content>
       </Card>
@@ -351,23 +416,40 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    marginBottom: 10,
+    borderRadius: 16,
+    marginBottom: 12,
     backgroundColor: '#f5f5f5',
     padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   selectedMood: {
     backgroundColor: '#e0f7fa',
     borderWidth: 2,
     borderColor: '#00b0ff',
+    shadowColor: '#0088cc',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   moodEmoji: {
-    fontSize: 28,
-    marginBottom: 4,
+    fontSize: 32,
+    marginBottom: 6,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
   },
   moodName: {
     fontSize: 12,
     textAlign: 'center',
+    fontWeight: '500',
+    color: '#444',
   },
   detailsSection: {
     marginTop: 20,
@@ -381,91 +463,163 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 10,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   intensityBar: {
     flexDirection: 'row',
     flex: 1,
     justifyContent: 'space-between',
     marginHorizontal: 15,
+    alignItems: 'center',
   },
   intensityDot: {
     width: 20,
     height: 20,
     borderRadius: 10,
     backgroundColor: '#e0e0e0',
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
   },
   activeDot: {
     backgroundColor: '#00b0ff',
+    borderColor: '#0088cc',
+    shadowColor: '#0088cc',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   intensityLabel: {
     textAlign: 'center',
     marginTop: 8,
-    color: '#757575',
+    color: '#444',
+    fontWeight: '500',
+    fontSize: 14,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    alignSelf: 'center',
   },
   noteInput: {
     borderWidth: 1,
     borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 5,
-    minHeight: 80,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+    minHeight: 100,
+    backgroundColor: '#f9f9f9',
+    fontSize: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   submitButton: {
-    marginTop: 20,
+    marginTop: 24,
+    borderRadius: 12,
+    paddingVertical: 6,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   historyItem: {
-    marginBottom: 15,
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#eaeaea',
   },
   historyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   moodChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#e8f4f8',
     borderRadius: 16,
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#d6ebf2',
   },
   historyEmoji: {
-    fontSize: 20,
+    fontSize: 22,
     marginRight: 6,
   },
   historyMoodName: {
     fontWeight: '600',
+    color: '#0088aa',
   },
   historyDate: {
     color: '#757575',
     fontSize: 12,
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   historyIntensity: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   intensityDots: {
     flexDirection: 'row',
+    marginLeft: 6,
   },
   smallDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: '#e0e0e0',
-    marginRight: 4,
+    marginRight: 5,
+    borderWidth: 0.5,
+    borderColor: '#d0d0d0',
   },
   activeSmallDot: {
     backgroundColor: '#00b0ff',
+    borderColor: '#0088cc',
   },
   historyNote: {
     fontStyle: 'italic',
-    color: '#666',
-    marginTop: 4,
+    color: '#555',
+    marginTop: 6,
+    backgroundColor: '#f5f5f5',
+    padding: 10,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#00b0ff',
   },
   divider: {
     marginTop: 10,
+    height: 0,
   },
 });
 
