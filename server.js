@@ -324,7 +324,13 @@ async function hashPassword(password) {
 }
 
 async function comparePasswords(supplied, stored) {
+  // For development only - direct comparison if no hash format detected
+  if (!stored.includes('.')) {
+    return supplied === stored;
+  }
+  
   try {
+    // Regular scrypt comparison for production
     const [hashed, salt] = stored.split('.');
     const hashedBuf = Buffer.from(hashed, 'hex');
     const suppliedBuf = await scryptAsync(supplied, salt, 64);
@@ -450,7 +456,9 @@ app.post('/api/logout', (req, res, next) => {
 
 app.get('/api/user', (req, res) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);
-  res.json(req.user);
+  // Remove password from response
+  const { password, ...userWithoutPassword } = req.user;
+  res.json(userWithoutPassword);
 });
 
 // Password reset routes
