@@ -4,12 +4,12 @@ modules = ["nodejs-20", "postgresql-16"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Run"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project "
 author = "agent"
-mode = "sequential"
+mode = "parallel"
 
 [workflows.workflow.metadata]
 agentRequireRestartOnSave = false
@@ -57,13 +57,47 @@ args = "chmod +x ./start-mood-tracker.sh && ./start-mood-tracker.sh"
 waitForPort = 5000
 
 [[workflows.workflow]]
-name = "Run"
-author = 18616269
-mode = "sequential"
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "MobileApp"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "SendAfrikaBackend"
+
+[[workflows.workflow]]
+name = "MobileApp"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node server.js"
+args = "npx expo start --web --port 5000"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "SendAfrikaBackend"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "./run-sendafrika.sh"
+waitForPort = 5001
 
 [deployment]
 run = ["sh", "-c", "npx expo start --web --port 5000"]
