@@ -317,34 +317,65 @@ class PostgresAdapter {
   
   // Transaction methods
   async createTransaction(data) {
-    const {
-      userId, sourceAmount, sourceCurrency, destinationAmount, destinationCurrency,
-      exchangeRate, fee, beneficiaryId, beneficiaryName, status, statusMessage,
-      paymentMethod, provider, reference, note
-    } = data;
-    
-    const result = await pool.query(
-      `INSERT INTO transactions
-        (user_id, source_amount, source_currency, destination_amount, destination_currency,
-        exchange_rate, fee, beneficiary_id, beneficiary_name, status, status_message,
-        payment_method, provider, reference, note)
-       VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-       RETURNING *`,
-      [
+    try {
+      const {
         userId, sourceAmount, sourceCurrency, destinationAmount, destinationCurrency,
-        exchangeRate, fee, beneficiaryId, beneficiaryName, status || 'pending', statusMessage,
+        exchangeRate, fee, beneficiaryId, beneficiaryName, status, statusMessage,
         paymentMethod, provider, reference, note
-      ]
-    );
-    
-    return this._mapTransactionFromDatabase(result.rows[0]);
+      } = data;
+      
+      // Ensure all numeric fields are properly formatted as numbers
+      const parsedSourceAmount = typeof sourceAmount === 'string' ? parseFloat(sourceAmount) : sourceAmount;
+      const parsedDestinationAmount = typeof destinationAmount === 'string' ? parseFloat(destinationAmount) : destinationAmount;
+      const parsedExchangeRate = typeof exchangeRate === 'string' ? parseFloat(exchangeRate) : exchangeRate;
+      const parsedFee = typeof fee === 'string' ? parseFloat(fee) : fee;
+      const parsedBeneficiaryId = beneficiaryId ? (isNaN(parseInt(beneficiaryId)) ? null : parseInt(beneficiaryId)) : null;
+      
+      console.log('Creating transaction with:',
+        `userId: ${userId} (${typeof userId})`,
+        `sourceAmount: ${parsedSourceAmount} (${typeof parsedSourceAmount})`,
+        `destinationAmount: ${parsedDestinationAmount} (${typeof parsedDestinationAmount})`,
+        `beneficiaryId: ${parsedBeneficiaryId} (${typeof parsedBeneficiaryId})`
+      );
+      
+      const result = await pool.query(
+        `INSERT INTO transactions
+          (user_id, source_amount, source_currency, destination_amount, destination_currency,
+          exchange_rate, fee, beneficiary_id, beneficiary_name, status, status_message,
+          payment_method, provider, reference, note)
+         VALUES
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+         RETURNING *`,
+        [
+          userId, parsedSourceAmount, sourceCurrency, parsedDestinationAmount, destinationCurrency,
+          parsedExchangeRate, parsedFee, parsedBeneficiaryId, beneficiaryName, status || 'pending', statusMessage,
+          paymentMethod, provider, reference, note
+        ]
+      );
+      
+      return this._mapTransactionFromDatabase(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+      throw error;
+    }
   }
   
   async getTransaction(id) {
-    const result = await pool.query('SELECT * FROM transactions WHERE id = $1', [id]);
-    if (result.rows.length === 0) return null;
-    return this._mapTransactionFromDatabase(result.rows[0]);
+    // Handle special cases like "stats"
+    if (isNaN(parseInt(id))) {
+      // If the ID is not a number (like "stats"), return null
+      console.log(`Invalid transaction ID format: ${id}`);
+      return null;
+    }
+    
+    try {
+      const result = await pool.query('SELECT * FROM transactions WHERE id = $1', [parseInt(id)]);
+      if (result.rows.length === 0) return null;
+      return this._mapTransactionFromDatabase(result.rows[0]);
+    } catch (error) {
+      console.error(`Error fetching transaction with ID ${id}:`, error);
+      return null;
+    }
   }
   
   async updateTransaction(id, data) {

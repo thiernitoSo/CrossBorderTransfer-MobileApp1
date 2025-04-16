@@ -27,36 +27,6 @@ task = "packager.installForLanguage"
 args = "nodejs"
 
 [[workflows.workflow]]
-name = "SendAfrikaApp"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "./run-sendafrika.sh"
-waitForPort = 5001
-
-[[workflows.workflow]]
-name = "MoodTrackerApp"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "chmod +x ./start-mood-tracker.sh && ./start-mood-tracker.sh"
-waitForPort = 5000
-
-[[workflows.workflow]]
 name = "Project"
 mode = "parallel"
 author = "agent"
