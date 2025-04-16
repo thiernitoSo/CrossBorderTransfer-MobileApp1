@@ -27,7 +27,7 @@ console.log('OpenAI service loaded successfully');
 
 // Create Express application
 const app = express();
-const PORT = 5000; // Always use port 5000 which is standard for Replit
+const PORT = process.env.PORT || 5000; // Use port 5000 which is standard for Replit
 
 // In-memory storage
 class MemStorage {
@@ -36,84 +36,12 @@ class MemStorage {
     this.beneficiaries = [];
     this.transactions = [];
     this.resetTokens = [];
-    this.moodEntries = []; // Array to store mood entries
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // prune expired entries every 24h
     });
     
     // Seed test data
     this.seedTestData();
-  }
-  
-  // Mood entry methods
-  async createMoodEntry(data) {
-    const newMoodEntry = {
-      id: uuidv4(),
-      userId: data.userId,
-      transactionId: data.transactionId || null,
-      moodId: data.moodId || '',
-      note: data.note || '',
-      createdAt: new Date().toISOString(),
-      ...data
-    };
-    
-    this.moodEntries.push(newMoodEntry);
-    return newMoodEntry;
-  }
-  
-  async getMoodEntry(id) {
-    return this.moodEntries.find(m => m.id === id) || null;
-  }
-  
-  async updateMoodEntry(id, data) {
-    const index = this.moodEntries.findIndex(m => m.id === id);
-    if (index === -1) throw new Error('Mood entry not found');
-    
-    this.moodEntries[index] = { 
-      ...this.moodEntries[index], 
-      ...data,
-      updatedAt: new Date().toISOString()
-    };
-    return this.moodEntries[index];
-  }
-  
-  async getMoodEntriesByUserId(userId) {
-    return this.moodEntries
-      .filter(m => m.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-  
-  async getMoodEntriesByTransactionId(transactionId) {
-    return this.moodEntries
-      .filter(m => m.transactionId === transactionId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-  
-  async getMoodStatistics(userId) {
-    const userMoods = await this.getMoodEntriesByUserId(userId);
-    
-    // Count occurrences of each mood
-    const moodCounts = userMoods.reduce((acc, mood) => {
-      acc[mood.moodId] = (acc[mood.moodId] || 0) + 1;
-      return acc;
-    }, {});
-    
-    // Find most frequent mood
-    let mostFrequentMood = null;
-    let maxCount = 0;
-    
-    for (const [moodId, count] of Object.entries(moodCounts)) {
-      if (count > maxCount) {
-        mostFrequentMood = moodId;
-        maxCount = count;
-      }
-    }
-    
-    return {
-      mostFrequentMood,
-      moodCounts,
-      recentMoods: userMoods.slice(0, 5), // Last 5 mood entries
-    };
   }
   
   seedTestData() {
@@ -382,17 +310,8 @@ const storage = new MemStorage();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({
-  origin: ['http://localhost:5000', 'https://workspace.thiernosow.repl.co'],
-  credentials: true
-}));
+app.use(cors());
 app.use(express.static('public')); // Serve static files from the 'public' directory
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({ error: 'Internal server error', message: err.message });
-});
 
 // Session and authentication setup
 const scryptAsync = promisify(crypto.scrypt);
@@ -698,109 +617,6 @@ app.delete('/api/beneficiaries/:id', async (req, res) => {
   } catch (error) {
     console.error('Delete beneficiary error:', error);
     res.status(500).json({ message: 'Failed to delete beneficiary' });
-  }
-});
-
-// Mood tracker routes
-app.get('/api/moods', async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
-  
-  try {
-    const moods = await storage.getMoodEntriesByUserId(req.user.id);
-    res.json(moods);
-  } catch (error) {
-    console.error('Get moods error:', error);
-    res.status(500).json({ message: 'Failed to get mood entries' });
-  }
-});
-
-app.get('/api/moods/:id', async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
-  
-  try {
-    const mood = await storage.getMoodEntry(req.params.id);
-    
-    if (!mood) {
-      return res.status(404).json({ message: 'Mood entry not found' });
-    }
-    
-    if (mood.userId !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to access this mood entry' });
-    }
-    
-    res.json(mood);
-  } catch (error) {
-    console.error('Get mood entry error:', error);
-    res.status(500).json({ message: 'Failed to get mood entry' });
-  }
-});
-
-app.post('/api/moods', async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
-  
-  try {
-    const newMood = await storage.createMoodEntry({
-      ...req.body,
-      userId: req.user.id
-    });
-    
-    res.status(201).json(newMood);
-  } catch (error) {
-    console.error('Create mood entry error:', error);
-    res.status(500).json({ message: 'Failed to create mood entry' });
-  }
-});
-
-app.put('/api/moods/:id', async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
-  
-  try {
-    const mood = await storage.getMoodEntry(req.params.id);
-    
-    if (!mood) {
-      return res.status(404).json({ message: 'Mood entry not found' });
-    }
-    
-    if (mood.userId !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to update this mood entry' });
-    }
-    
-    const updatedMood = await storage.updateMoodEntry(req.params.id, req.body);
-    res.json(updatedMood);
-  } catch (error) {
-    console.error('Update mood entry error:', error);
-    res.status(500).json({ message: 'Failed to update mood entry' });
-  }
-});
-
-app.get('/api/moods/transaction/:transactionId', async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
-  
-  try {
-    const moods = await storage.getMoodEntriesByTransactionId(req.params.transactionId);
-    
-    // Check if user owns at least one of these mood entries
-    const transaction = await storage.getTransaction(req.params.transactionId);
-    if (!transaction || transaction.userId !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to access moods for this transaction' });
-    }
-    
-    res.json(moods);
-  } catch (error) {
-    console.error('Get transaction moods error:', error);
-    res.status(500).json({ message: 'Failed to get mood entries for transaction' });
-  }
-});
-
-app.get('/api/moods/statistics', async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
-  
-  try {
-    const statistics = await storage.getMoodStatistics(req.user.id);
-    res.json(statistics);
-  } catch (error) {
-    console.error('Get mood statistics error:', error);
-    res.status(500).json({ message: 'Failed to get mood statistics' });
   }
 });
 
@@ -1535,85 +1351,9 @@ app.get('*', (req, res) => {
   res.sendFile('index.html', { root: './public' });
 });
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({
-    error: 'Server error',
-    message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
-  });
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on http://0.0.0.0:${PORT}`);
+  console.log(`Access the application at: https://workspace.thiernosow.repl.co`);
 });
-
-// Graceful shutdown handling
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  // Close server and any other resources
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
-  // Close server and any other resources
-  process.exit(0);
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught exception:', err);
-  // Keep the process alive but log the error
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Keep the process alive but log the error
-});
-
-// Start the server
-const startServer = () => {
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on http://0.0.0.0:${PORT}`);
-    console.log(`Server ready to accept connections on port ${PORT}`);
-    console.log('ENVIRONMENT INFO:');
-    console.log(`- NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`- DATABASE CONNECTION: ${process.env.DATABASE_URL ? 'Available' : 'Not configured'}`);
-    
-    // Send a dummy request to the server to ensure it's responsive
-    const http = require('http');
-    const options = {
-      hostname: '0.0.0.0',
-      port: PORT,
-      path: '/api/health',
-      method: 'GET',
-    };
-    
-    const req = http.request(options, (res) => {
-      console.log(`Server responded with status code: ${res.statusCode}`);
-      let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      res.on('end', () => {
-        console.log(`Response: ${data}`);
-        console.log('Server is confirmed to be accepting connections');
-      });
-    });
-    
-    req.on('error', (error) => {
-      console.error('Error making request to the server:', error);
-    });
-    
-    req.end();
-  });
-  
-  return server;
-};
-
-// Add a health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', port: PORT, timestamp: new Date().toISOString() });
-});
-
-const server = startServer();
 
 module.exports = app;

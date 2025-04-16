@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "postgresql-16"]
+modules = ["nodejs-20"]
 
 [nix]
 channel = "stable-24_05"
@@ -13,15 +13,12 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "MoodTrackerServer"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "MobileApp"
+args = "Server"
 
 [[workflows.workflow]]
-name = "MoodTrackerServer"
+name = "Server"
 author = "agent"
+mode = "sequential"
 
 [workflows.workflow.metadata]
 agentRequireRestartOnSave = false
@@ -31,33 +28,14 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "./start-mood-tracker.sh"
+args = "node server.js"
 waitForPort = 5000
-
-[[workflows.workflow]]
-name = "MobileApp"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npx expo start --web --port 5001 --host localhost --no-dev"
-waitForPort = 5001
 
 [deployment]
 run = ["sh", "-c", "npx expo start --web --port 5000"]
 
 [[ports]]
 localPort = 5000
-externalPort = 5000
-
-[[ports]]
-localPort = 5001
 externalPort = 80
 
 [[ports]]
