@@ -16,7 +16,7 @@ const AIChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello! I'm Rafiki, your AI assistant at SendAfrika. How can I help you with your money transfer needs today?',
+      text: 'Hello! I\'m Rafiki, your AI assistant at SendAfrika. How can I help you with your money transfer needs today?',
       sender: 'assistant',
       timestamp: new Date(),
     },

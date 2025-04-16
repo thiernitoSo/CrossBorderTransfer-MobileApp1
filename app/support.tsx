@@ -24,15 +24,15 @@ export default function Support() {
     },
     {
       question: 'Which African countries can I send money to?',
-      answer: 'We currently support transfers to Ghana, Nigeria, Kenya, Rwanda, Senegal, Côte d\'Ivoire, Cameroon, South Africa, Tanzania, Uganda, Ethiopia, and Morocco. We're regularly expanding our coverage.'
+      answer: 'We currently support transfers to Ghana, Nigeria, Kenya, Rwanda, Senegal, Côte d\'Ivoire, Cameroon, South Africa, Tanzania, Uganda, Ethiopia, and Morocco. We\'re regularly expanding our coverage.'
     },
     {
       question: 'What information do I need to send money?',
-      answer: 'You'll need to provide your recipient's name, phone number, and country. Depending on the payment method, you may also need their bank account details or mobile money account.'
+      answer: 'You\'ll need to provide your recipient\'s name, phone number, and country. Depending on the payment method, you may also need their bank account details or mobile money account.'
     },
     {
       question: 'How do I verify my identity (KYC)?',
-      answer: 'You'll need to provide a government-issued ID (passport, driver's license, or national ID), proof of address, and complete a brief questionnaire about your source of funds and purpose of transfers.'
+      answer: 'You\'ll need to provide a government-issued ID (passport, driver\'s license, or national ID), proof of address, and complete a brief questionnaire about your source of funds and purpose of transfers.'
     },
   ];
   
