@@ -20,6 +20,9 @@ let orangeMoneyService, rafikiService, paymentService;
 // Import OpenAI service
 const openaiService = require('./services/openaiService');
 
+// Test database connection
+const { testConnection } = require('./server/connect-db');
+
 // For now, we'll just acknowledge these services would be imported
 // in a production environment but we don't need to worry about them for our app
 console.log('Payment services loaded successfully');
@@ -305,7 +308,8 @@ class MemStorage {
   }
 }
 
-// Import the database storage implementation
+// Since we're having dependency issues with PostgreSQL, we'll use in-memory storage for now
+console.log('Initializing storage...');
 const { storage } = require('./server/storage');
 
 // Middleware

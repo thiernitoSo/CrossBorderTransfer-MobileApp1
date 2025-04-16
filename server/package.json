@@ -25,5 +25,8 @@
   },
   "devDependencies": {
     "drizzle-kit": "^0.21.0"
-  }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

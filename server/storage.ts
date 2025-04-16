@@ -119,7 +119,7 @@ export interface TransactionStatistics {
 }
 
 // In-memory storage implementation
-class MemStorage implements IStorage {
+export class MemStorage implements IStorage {
   private users: User[] = [];
   private beneficiaries: Beneficiary[] = [];
   private transactions: Transaction[] = [];
@@ -1164,5 +1164,7 @@ class DatabaseStorage implements IStorage {
   }
 }
 
-// Use the PostgreSQL storage implementation instead of MemStorage
-export const storage = new DatabaseStorage();
+// Storage implementation choice
+// For now, we'll use MemStorage to avoid dependency issues with PostgreSQL
+// TODO: When we resolve PostgreSQL dependencies, switch to DatabaseStorage
+export const storage = new MemStorage();

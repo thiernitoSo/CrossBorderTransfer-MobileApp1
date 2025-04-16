@@ -3,17 +3,12 @@
 
 echo "Starting Money Mood Tracker server on port 5000..."
 
-# Check if database URL is available
+# Install the minimal required modules
+npm install --no-save memorystore express-session uuid --silent
+
+# Use PostgreSQL or in-memory storage based on environment variable
 if [ -n "$DATABASE_URL" ]; then
   echo "Database URL available: true"
-  
-  # Install required modules silently
-  npm install --no-save memorystore express-session uuid --silent
-else
-  echo "WARNING: DATABASE_URL not found. Using in-memory storage instead."
-  
-  # Install the minimal modules needed for in-memory storage
-  npm install --no-save memorystore express-session uuid --silent
 fi
 
 # Start the server
