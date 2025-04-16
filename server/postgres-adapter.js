@@ -447,68 +447,80 @@ class PostgresAdapter {
   _mapUserFromDatabase(row) {
     if (!row) return null;
     
+    // Format timestamps or use current time if null
+    const createdAt = row.created_at ? row.created_at.toISOString() : new Date().toISOString();
+    const updatedAt = row.updated_at ? row.updated_at.toISOString() : new Date().toISOString();
+    
     return {
       id: row.id.toString(),
-      firstName: row.first_name,
-      lastName: row.last_name,
-      email: row.email,
-      phoneNumber: row.phone_number,
-      password: row.password,
-      isVerified: row.is_verified,
-      createdAt: row.created_at.toISOString(),
-      updatedAt: row.updated_at.toISOString(),
-      address: row.address,
-      city: row.city,
-      province: row.province,
-      postalCode: row.postal_code,
-      role: row.role
+      firstName: row.first_name || '',
+      lastName: row.last_name || '',
+      email: row.email || '',
+      phoneNumber: row.phone_number || '',
+      password: row.password || '',
+      isVerified: row.is_verified || false,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      address: row.address || '',
+      city: row.city || '',
+      province: row.province || '',
+      postalCode: row.postal_code || '',
+      role: row.role || 'user'
     };
   }
   
   _mapBeneficiaryFromDatabase(row) {
     if (!row) return null;
     
+    // Format timestamps or use current time if null
+    const createdAt = row.created_at ? row.created_at.toISOString() : new Date().toISOString();
+    const updatedAt = row.updated_at ? row.updated_at.toISOString() : new Date().toISOString();
+    
     return {
       id: row.id.toString(),
       userId: row.user_id.toString(),
-      firstName: row.first_name,
-      lastName: row.last_name,
-      country: row.country,
-      phoneNumber: row.phone_number,
-      relationship: row.relationship,
-      paymentMethod: row.payment_method,
-      accountNumber: row.account_number,
-      bankName: row.bank_name,
-      branchCode: row.branch_code,
-      mobileMoneyProvider: row.mobile_money_provider,
-      createdAt: row.created_at.toISOString(),
-      updatedAt: row.updated_at.toISOString()
+      firstName: row.first_name || '',
+      lastName: row.last_name || '',
+      country: row.country || '',
+      phoneNumber: row.phone_number || '',
+      relationship: row.relationship || '',
+      paymentMethod: row.payment_method || '',
+      accountNumber: row.account_number || '',
+      bankName: row.bank_name || '',
+      branchCode: row.branch_code || '',
+      mobileMoneyProvider: row.mobile_money_provider || '',
+      createdAt: createdAt,
+      updatedAt: updatedAt
     };
   }
   
   _mapTransactionFromDatabase(row) {
     if (!row) return null;
     
+    // Format timestamps or use current time if null
+    const createdAt = row.created_at ? row.created_at.toISOString() : new Date().toISOString();
+    const updatedAt = row.updated_at ? row.updated_at.toISOString() : new Date().toISOString();
+    
     return {
       id: row.id.toString(),
       userId: row.user_id.toString(),
-      sourceAmount: parseFloat(row.source_amount),
-      sourceCurrency: row.source_currency,
-      destinationAmount: parseFloat(row.destination_amount),
-      destinationCurrency: row.destination_currency,
-      exchangeRate: parseFloat(row.exchange_rate),
-      fee: parseFloat(row.fee),
-      beneficiaryId: row.beneficiary_id.toString(),
-      beneficiaryName: row.beneficiary_name,
-      status: row.status,
-      statusMessage: row.status_message,
-      paymentMethod: row.payment_method,
-      provider: row.provider,
-      reference: row.reference,
-      externalTransactionId: row.external_transaction_id,
-      note: row.note,
-      createdAt: row.created_at.toISOString(),
-      updatedAt: row.updated_at.toISOString()
+      sourceAmount: parseFloat(row.source_amount || '0'),
+      sourceCurrency: row.source_currency || 'CAD',
+      destinationAmount: parseFloat(row.destination_amount || '0'),
+      destinationCurrency: row.destination_currency || '',
+      exchangeRate: parseFloat(row.exchange_rate || '1'),
+      fee: parseFloat(row.fee || '0'),
+      beneficiaryId: row.beneficiary_id ? row.beneficiary_id.toString() : '',
+      beneficiaryName: row.beneficiary_name || '',
+      status: row.status || 'pending',
+      statusMessage: row.status_message || '',
+      paymentMethod: row.payment_method || '',
+      provider: row.provider || '',
+      reference: row.reference || '',
+      externalTransactionId: row.external_transaction_id || '',
+      note: row.note || '',
+      createdAt: createdAt,
+      updatedAt: updatedAt
     };
   }
   
