@@ -14,6 +14,7 @@ export interface MoodEntry {
   transactionId?: string;
   moodId: string;
   mood?: Mood;
+  intensity?: number;
   note?: string;
   createdAt: string;
 }
@@ -31,12 +32,17 @@ export interface MoodStatistics {
 /**
  * Get all moods for the current user
  */
-export const getMoodEntries = async (): Promise<MoodEntry[]> => {
+export const getMoodEntries = async (userId?: string): Promise<MoodEntry[]> => {
   try {
+    // If userId is provided, get mood entries for that user
+    if (userId) {
+      return await get(`/api/mood-entries/${userId}`);
+    }
     return await get('/api/moods');
   } catch (error) {
     console.error('Failed to get mood entries:', error);
-    throw error;
+    // Return empty array in case of error to avoid app crashes
+    return [];
   }
 };
 
@@ -57,7 +63,14 @@ export const getMoodEntriesByTransaction = async (transactionId: string): Promis
  */
 export const saveMoodEntry = async (data: Partial<MoodEntry>): Promise<MoodEntry> => {
   try {
-    return await post('/api/moods', data);
+    // Use the new endpoint that's actually implemented on the server
+    return await post('/api/mood-entries', {
+      userId: data.userId,
+      transactionId: data.transactionId,
+      moodId: data.moodId,
+      intensity: data.intensity || 3,
+      note: data.note || ''
+    });
   } catch (error) {
     console.error('Failed to save mood entry:', error);
     throw error;
@@ -67,12 +80,24 @@ export const saveMoodEntry = async (data: Partial<MoodEntry>): Promise<MoodEntry
 /**
  * Get mood statistics for the current user
  */
-export const getMoodStatistics = async (): Promise<MoodStatistics> => {
+export const getMoodStatistics = async (userId?: string): Promise<MoodStatistics> => {
   try {
+    if (userId) {
+      return await get(`/api/mood-stats/${userId}`);
+    }
     return await get('/api/moods/statistics');
   } catch (error) {
     console.error('Failed to get mood statistics:', error);
-    throw error;
+    // Return default statistics to avoid app crashes
+    return {
+      totalCount: 0,
+      moodDistribution: {},
+      mostFrequentMood: {
+        moodId: '',
+        count: 0
+      },
+      recentTrend: 'neutral'
+    };
   }
 };
 

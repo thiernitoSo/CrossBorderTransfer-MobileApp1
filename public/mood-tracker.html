@@ -214,8 +214,8 @@
   
   <script>
     // Configuration
-    const API_URL = 'http://0.0.0.0:5000';
-    const USER_ID = '1'; // Using test user ID 1
+    const API_URL = ''; // Use relative URL which works across all environments
+    const USER_ID = '2'; // Using test user ID 2
     
     // DOM Elements
     const serverStatus = document.getElementById('server-status');
@@ -401,13 +401,17 @@
       moodHistory.innerHTML = '';
       
       moodEntries.forEach(entry => {
-        const mood = getMoodById(entry.moodId);
+        // Handle different field naming (mood_id vs moodId)
+        const moodId = entry.mood_id || entry.moodId;
+        const mood = getMoodById(moodId);
         if (!mood) return;
         
         const entryElement = document.createElement('div');
         entryElement.className = 'history-item';
         
-        const date = new Date(entry.createdAt).toLocaleDateString();
+        // Handle the date field which might be called created_at or createdAt
+        const dateStr = entry.created_at || entry.createdAt;
+        const date = new Date(dateStr).toLocaleDateString();
         
         entryElement.innerHTML = `
           <div class="history-header">
