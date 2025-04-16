@@ -68,7 +68,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
       )}
 
       <Formik
-        initialValues={{ email: '', password: '' }}
+        initialValues={{ email: 'admin@example.com', password: 'admin123' }}
         validationSchema={loginSchema}
         onSubmit={handleSubmit}
       >
@@ -115,7 +115,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
               title="Sign In"
               onPress={handleSubmit}
               loading={isLoading}
-              disabled={!(isValid && dirty)}
+              disabled={!isValid}
               fullWidth
             />
 

@@ -22,6 +22,7 @@ interface InputProps {
   rightIcon?: string;
   onRightIconPress?: () => void;
   maxLength?: number;
+  onBlur?: (e: any) => void;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -43,12 +44,16 @@ const Input: React.FC<InputProps> = ({
   rightIcon,
   onRightIconPress,
   maxLength,
+  onBlur,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(!secureTextEntry);
 
   const handleFocus = () => setIsFocused(true);
-  const handleBlur = () => setIsFocused(false);
+  const handleBlur = (e: any) => {
+    setIsFocused(false);
+    if (onBlur) onBlur(e);
+  };
 
   const togglePasswordVisibility = () => {
     setIsPasswordVisible(!isPasswordVisible);
