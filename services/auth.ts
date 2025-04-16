@@ -36,16 +36,16 @@ export interface AuthResponse {
  */
 export const login = async (credentials: LoginCredentials): Promise<User> => {
   try {
-    const response = await apiService.post<AuthResponse>('/auth/login', credentials);
+    // Use the Express server's login endpoint which uses sessions, not JWT
+    const user = await apiService.post<User>('/login', credentials);
     
-    // Save tokens to secure storage
-    await saveSecureValue(SECURE_STORAGE_KEYS.ACCESS_TOKEN, response.accessToken);
-    await saveSecureValue(SECURE_STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
+    // Store a placeholder token to indicate authenticated state (our server uses sessions, not tokens)
+    await saveSecureValue(SECURE_STORAGE_KEYS.ACCESS_TOKEN, 'session-auth');
     
     // Save user data to storage
-    await storeData(STORAGE_KEYS.USER_PROFILE, response.user);
+    await storeData(STORAGE_KEYS.USER_PROFILE, user);
     
-    return response.user;
+    return user;
   } catch (error) {
     console.error('Login error:', error);
     throw error;
