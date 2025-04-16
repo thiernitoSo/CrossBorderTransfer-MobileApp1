@@ -1570,10 +1570,50 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Start the server
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on http://0.0.0.0:${PORT}`);
-  console.log(`Access the application at: https://workspace.thiernosow.repl.co`);
-  console.log('Server ready to accept connections');
+const startServer = () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on http://0.0.0.0:${PORT}`);
+    console.log(`Server ready to accept connections on port ${PORT}`);
+    console.log('ENVIRONMENT INFO:');
+    console.log(`- NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`- DATABASE CONNECTION: ${process.env.DATABASE_URL ? 'Available' : 'Not configured'}`);
+    
+    // Send a dummy request to the server to ensure it's responsive
+    const http = require('http');
+    const options = {
+      hostname: '0.0.0.0',
+      port: PORT,
+      path: '/api/health',
+      method: 'GET',
+    };
+    
+    const req = http.request(options, (res) => {
+      console.log(`Server responded with status code: ${res.statusCode}`);
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        console.log(`Response: ${data}`);
+        console.log('Server is confirmed to be accepting connections');
+      });
+    });
+    
+    req.on('error', (error) => {
+      console.error('Error making request to the server:', error);
+    });
+    
+    req.end();
+  });
+  
+  return server;
+};
+
+// Add a health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', port: PORT, timestamp: new Date().toISOString() });
 });
+
+const server = startServer();
 
 module.exports = app;
