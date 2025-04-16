@@ -66,7 +66,7 @@ class MemStorage {
       email: 'admin@example.com',
       phoneNumber: '+15559876543',
       // Password: 'admin123'
-      password: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9.29eeec87b99e20ae',
+      password: '04cb677ba40479917064f7cb92c12ee47e1cc48c5c349ebff106c6133a42619052a4258c3225e5abf662d6888b366a0f647ade9df59635b82bd0b0a97f314e17.29eeec87b99e20ae',
       isVerified: true,
       role: 'admin',
       createdAt: new Date().toISOString()
