@@ -159,7 +159,7 @@ app.get('/', (req, res) => {
       
       <script>
         // Simulate connection to API server
-        fetch('http://localhost:5001/api/user')
+        fetch('https://workspace.thiernosow.repl.co/api/user')
           .then(response => {
             if (response.ok) {
               console.log('Successfully connected to backend API');
@@ -176,7 +176,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5002; // Changed to port 5002 to avoid conflict with MobileApp
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Mobile app simulator running on http://0.0.0.0:${PORT}`);
 });

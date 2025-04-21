@@ -86,7 +86,7 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node mobile-app-server.js"
-waitForPort = 5000
+waitForPort = 5002
 
 [deployment]
 run = ["sh", "-c", "npx expo start --port 5000"]
@@ -98,6 +98,10 @@ externalPort = 80
 [[ports]]
 localPort = 5001
 externalPort = 3000
+
+[[ports]]
+localPort = 5002
+externalPort = 3001
 
 [[ports]]
 localPort = 8000
