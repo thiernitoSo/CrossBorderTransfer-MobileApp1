@@ -2,8 +2,8 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { getSecureValue, SECURE_STORAGE_KEYS } from '../utils/storage';
 import * as SecureStore from 'expo-secure-store';
 
-// API base URL - pointing to our Express server
-const API_BASE_URL = 'http://localhost:5000/api';
+// API base URL - in production this would be your actual API endpoint
+const API_BASE_URL = 'http://localhost:8000/api';
 
 // Create axios instance with default config
 const apiClient: AxiosInstance = axios.create({
@@ -13,13 +13,18 @@ const apiClient: AxiosInstance = axios.create({
     'Accept': 'application/json',
   },
   timeout: 30000, // 30 seconds timeout
-  withCredentials: true, // Important for cookie-based sessions
 });
 
-// Since we're using session-based auth with cookies, we don't need to add auth tokens
+// Add request interceptor to include auth token in requests
 apiClient.interceptors.request.use(
   async (config) => {
-    // Cookies will be automatically included due to withCredentials: true
+    // Get token from secure storage
+    const token = await getSecureValue(SECURE_STORAGE_KEYS.ACCESS_TOKEN);
+    
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     return config;
   },
   (error) => {
@@ -27,13 +32,51 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Simple error handling response interceptor
+// Add response interceptor to handle token refresh
 apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error) => {
-    // Let the handler handle all errors
+    const originalRequest = error.config;
+    
+    // If error is 401 (Unauthorized) and not a retry
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Get refresh token
+        const refreshToken = await getSecureValue(SECURE_STORAGE_KEYS.REFRESH_TOKEN);
+        
+        if (!refreshToken) {
+          // No refresh token, logout user
+          return Promise.reject(error);
+        }
+        
+        // Attempt to refresh token
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+          refreshToken,
+        });
+        
+        // Save new tokens
+        await SecureStore.setItemAsync(
+          SECURE_STORAGE_KEYS.ACCESS_TOKEN,
+          response.data.accessToken
+        );
+        await SecureStore.setItemAsync(
+          SECURE_STORAGE_KEYS.REFRESH_TOKEN,
+          response.data.refreshToken
+        );
+        
+        // Retry original request with new token
+        originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        // Token refresh failed, logout user
+        return Promise.reject(refreshError);
+      }
+    }
+    
     return Promise.reject(error);
   }
 );

@@ -23,7 +23,12 @@
         "backgroundColor": "#ffffff"
       }
     },
-
-    "plugins": []
+    "web": {
+      "favicon": "./generated-icon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "scheme": "sendafrika"
   }
 }

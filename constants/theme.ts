@@ -3,14 +3,14 @@ import { DefaultTheme } from 'react-native-paper';
 // Financial app color scheme: professional, trustworthy, and clean
 const colors = {
   // Primary colors
-  primary: '#2563EB', // Modern blue for trust and professionalism
-  primaryLight: '#60A5FA',
-  primaryDark: '#1E40AF',
+  primary: '#0056B3', // Deep blue for trust and professionalism
+  primaryLight: '#4D8FCF',
+  primaryDark: '#003A78',
   
   // Secondary colors
-  secondary: '#F97316', // Vibrant orange for calls to action
-  secondaryLight: '#FB923C',
-  secondaryDark: '#EA580C',
+  secondary: '#FF7E00', // Orange accent for calls to action
+  secondaryLight: '#FFA44D',
+  secondaryDark: '#CC6600',
   
   // Neutrals
   background: '#F7F9FC', // Light background

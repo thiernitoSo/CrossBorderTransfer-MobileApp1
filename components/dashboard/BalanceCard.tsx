@@ -73,17 +73,11 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: theme.roundness.large,
+    borderRadius: theme.roundness.medium,
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    elevation: 3,
-    shadowColor: theme.colors.primary,
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border + '30',
+    elevation: 2,
   },
   content: {
     padding: theme.spacing.md,
