@@ -20,9 +20,6 @@ let orangeMoneyService, rafikiService, paymentService;
 // Import OpenAI service
 const openaiService = require('./services/openaiService');
 
-// Test database connection
-const { testConnection } = require('./server/connect-db');
-
 // For now, we'll just acknowledge these services would be imported
 // in a production environment but we don't need to worry about them for our app
 console.log('Payment services loaded successfully');
@@ -308,37 +305,15 @@ class MemStorage {
   }
 }
 
-// Initialize session middleware first
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'sendafrika-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  store: new MemoryStore({
-    checkPeriod: 86400000 // 24 hours
-  }),
-  cookie: {
-    secure: false,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
+const storage = new MemStorage();
 
-// Initialize passport after session
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Initialize other middleware
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
+app.use(cors());
 app.use(express.static('public')); // Serve static files from the 'public' directory
-console.log('Initializing storage...');
-const { getStorage } = require('./server/storage');
-let storage;
 
-// Helper functions for authentication
+// Session and authentication setup
 const scryptAsync = promisify(crypto.scrypt);
 
 async function hashPassword(password) {
@@ -348,13 +323,7 @@ async function hashPassword(password) {
 }
 
 async function comparePasswords(supplied, stored) {
-  // For development only - direct comparison if no hash format detected
-  if (!stored.includes('.')) {
-    return supplied === stored;
-  }
-  
   try {
-    // Regular scrypt comparison for production
     const [hashed, salt] = stored.split('.');
     const hashedBuf = Buffer.from(hashed, 'hex');
     const suppliedBuf = await scryptAsync(supplied, salt, 64);
@@ -378,44 +347,31 @@ function isAdmin(req, res, next) {
   next();
 }
 
-// Session and authentication will be set up in async startServer function
+// Set up session
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'sendafrika-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  store: storage.sessionStore,
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Passport local strategy
 passport.use(new LocalStrategy(
   { usernameField: 'email' },
   async (email, password, done) => {
     try {
-      console.log('LocalStrategy authenticating with email:', email);
       const user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        console.log('User not found:', email);
+      if (!user || !(await comparePasswords(password, user.password))) {
         return done(null, false, { message: 'Invalid email or password' });
       }
-      
-      // For test users with non-hashed passwords, allow direct comparison
-      if (email === 'user@example.com' && password === 'user123') {
-        console.log('Test user authenticated directly');
-        return done(null, user);
-      }
-      
-      // For test users with non-hashed passwords, allow direct comparison
-      if (email === 'admin@example.com' && password === 'admin123') {
-        console.log('Admin user authenticated directly');
-        return done(null, user);
-      }
-      
-      // For normal users, verify with comparePasswords
-      const isValid = await comparePasswords(password, user.password);
-      console.log('Password comparison result:', isValid);
-      
-      if (!isValid) {
-        return done(null, false, { message: 'Invalid email or password' });
-      }
-      
       return done(null, user);
     } catch (error) {
-      console.error('Authentication error:', error);
       return done(error);
     }
   }
@@ -468,30 +424,15 @@ app.post('/api/register', async (req, res, next) => {
 });
 
 app.post('/api/login', (req, res, next) => {
-  console.log('Login attempt with:', req.body.email);
-  
-  // Ensure we're using the right field from the request
-  const usernameField = req.body.email ? 'email' : 'username';
-  
-  passport.authenticate('local', { usernameField }, (err, user, info) => {
-    if (err) {
-      console.error('Authentication error:', err);
-      return next(err);
-    }
-    
+  passport.authenticate('local', (err, user, info) => {
+    if (err) return next(err);
     if (!user) {
-      console.log('Authentication failed:', info?.message || 'Invalid credentials');
       return res.status(401).json({ message: info?.message || 'Invalid email or password' });
     }
 
-    console.log('User authenticated, attempting login');
     req.login(user, (loginErr) => {
-      if (loginErr) {
-        console.error('Login error:', loginErr);
-        return next(loginErr);
-      }
+      if (loginErr) return next(loginErr);
       
-      console.log('Login successful for user:', user.email);
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -508,9 +449,7 @@ app.post('/api/logout', (req, res, next) => {
 
 app.get('/api/user', (req, res) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);
-  // Remove password from response
-  const { password, ...userWithoutPassword } = req.user;
-  res.json(userWithoutPassword);
+  res.json(req.user);
 });
 
 // Password reset routes
@@ -1400,155 +1339,21 @@ if (openaiService) {
   });
 }
 
-// Define the API routes that will be mounted after session initialization
-const defineAPIRoutes = () => {
-  console.log('Setting up API routes with proper session and authentication context');
-  
-  /**
-   * This function is only called after session and passport middleware
-   * are properly initialized. All routes that depend on authentication
-   * and session should be defined here.
-   */
-  
-  // Re-register auth routes with proper session context
-  app.post('/api/register', async (req, res, next) => {
-    try {
-      console.log('Registration attempt:', req.body.email);
-      const { email, password, firstName, lastName, phoneNumber } = req.body;
-
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ message: 'Email already in use' });
-      }
-
-      // Create new user
-      const hashedPassword = await hashPassword(password);
-      const user = await storage.createUser({
-        email,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        phoneNumber,
-        isVerified: false,
-      });
-
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
-      
-      console.log('User created successfully, attempting login');
-      
-      req.login(userWithoutPassword, (err) => {
-        if (err) {
-          console.error('Login after registration error:', err);
-          return next(err);
-        }
-        console.log('Login after registration successful');
-        res.status(201).json(userWithoutPassword);
-      });
-    } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({ message: 'Failed to register user' });
-    }
-  });
-  
-  app.post('/api/login', (req, res, next) => {
-    console.log('Login attempt with:', req.body.email);
-    
-    passport.authenticate('local', (err, user, info) => {
-      if (err) {
-        console.error('Authentication error:', err);
-        return next(err);
-      }
-      
-      if (!user) {
-        console.log('Authentication failed:', info?.message || 'Invalid credentials');
-        return res.status(401).json({ message: info?.message || 'Invalid email or password' });
-      }
-
-      console.log('User authenticated, attempting login');
-      req.login(user, (loginErr) => {
-        if (loginErr) {
-          console.error('Login error:', loginErr);
-          return next(loginErr);
-        }
-        
-        console.log('Login successful for user:', user.email);
-        // Remove password from response
-        const { password, ...userWithoutPassword } = user;
-        res.json(userWithoutPassword);
-      });
-    })(req, res, next);
-  });
-  
-  app.post('/api/logout', (req, res, next) => {
-    req.logout((err) => {
-      if (err) return next(err);
-      res.sendStatus(200);
-    });
-  });
-  
-  app.get('/api/user', (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    // Remove password from response
-    const { password, ...userWithoutPassword } = req.user;
-    res.json(userWithoutPassword);
-  });
-};
-
-// Async function to start the server
-async function startServer() {
-  try {
-    // Initialize storage
-    storage = await getStorage();
-    
-    console.log('Setting up session middleware');
-    
-    // Set up session and authentication now that storage is initialized
-    // Important: This must be before any route definitions that require authentication
-    app.use(session({
-      secret: process.env.SESSION_SECRET || 'sendafrika-secret-key',
-      resave: false,
-      saveUninitialized: false,
-      store: storage.sessionStore,
-      cookie: {
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        secure: false  // Set to true in production with HTTPS
-      }
-    }));
-    
-    app.use(passport.initialize());
-    app.use(passport.session());
-    
-    // Wait for session middleware to be properly initialized
-    console.log('Session middleware initialized');
-    
-    // Now set up the API routes that depend on session and auth
-    defineAPIRoutes();
-    
-    // Catch-all route to serve the SPA for any non-API routes
-    app.get('*', (req, res) => {
-      // Don't handle API routes here
-      if (req.path.startsWith('/api/')) {
-        return res.status(404).json({ message: 'API endpoint not found' });
-      }
-      
-      // Send the index.html file for all other routes
-      res.sendFile('index.html', { root: './public' });
-    });
-    
-    // Start the server
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server is running on http://0.0.0.0:${PORT}`);
-      console.log(`Access the application at: https://workspace.thiernosow.repl.co`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-}
-
 // Start the server
-startServer();
+// Catch-all route to serve the SPA for any non-API routes
+app.get('*', (req, res) => {
+  // Don't handle API routes here
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ message: 'API endpoint not found' });
+  }
+  
+  // Send the index.html file for all other routes
+  res.sendFile('index.html', { root: './public' });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on http://0.0.0.0:${PORT}`);
+  console.log(`Access the application at: https://workspace.thiernosow.repl.co`);
+});
 
 module.exports = app;

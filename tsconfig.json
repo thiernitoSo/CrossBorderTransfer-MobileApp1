@@ -2,9 +2,7 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
-    "lib": [
-      "es2020"
-    ],
+    "lib": ["es2020"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -13,12 +11,6 @@
     "rootDir": ".",
     "resolveJsonModule": true
   },
-  "include": [
-    "server/**/*",
-    "shared/**/*"
-  ],
-  "exclude": [
-    "node_modules"
-  ],
-  "extends": "expo/tsconfig.base"
+  "include": ["server/**/*", "shared/**/*"],
+  "exclude": ["node_modules"]
 }

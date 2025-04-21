@@ -34,8 +34,5 @@
     "react-native-web": "^0.19.13",
     "uuid": "^11.1.0",
     "yup": "^1.6.1"
-  },
-  "devDependencies": {
-    "typescript": "^5.3.3"
   }
 }
