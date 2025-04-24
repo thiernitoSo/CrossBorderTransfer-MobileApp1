@@ -330,8 +330,10 @@ app.use(passport.session());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
-  origin: true,
-  credentials: true
+  origin: ['http://localhost:5000', 'http://localhost:5002', 'https://workspace.thiernosow.repl.co'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.static('public')); // Serve static files from the 'public' directory
 console.log('Initializing storage...');
