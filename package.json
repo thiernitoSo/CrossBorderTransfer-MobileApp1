@@ -1,3 +1,4 @@
+
 {
   "name": "workspace",
   "version": "1.0.0",
@@ -28,7 +29,7 @@
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "pg": "^8.14.1",
-    "react": "^18.2.0",
+    "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-native": "0.72.10",
     "react-native-paper": "^5.13.1",
