@@ -1,4 +1,5 @@
-import express, { json, urlencoded } from 'express';
+//import express, { json, urlencoded } from 'express';
+const express = require('express');
 import cors from 'cors';
 import session from 'express-session';
 import { initialize, session as _session, use, serializeUser, deserializeUser, authenticate } from 'passport';
