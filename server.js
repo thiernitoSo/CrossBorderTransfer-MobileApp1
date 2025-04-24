@@ -18,7 +18,7 @@ dotenv.config();
 let orangeMoneyService, rafikiService, paymentService;
 
 // Import OpenAI service
-const openaiService = require('./services/openaiService');
+const openaiService = require('./server/openai-service.js');
 
 // Test database connection
 const { testConnection } = require('./server/connect-db');
