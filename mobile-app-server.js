@@ -67,6 +67,8 @@ app.get('/', (req, res) => {
           margin-bottom: 10px;
           text-decoration: none;
           font-weight: bold;
+          border: none;
+          cursor: pointer;
         }
         .nav-bar {
           display: flex;
@@ -108,6 +110,43 @@ app.get('/', (req, res) => {
           background: #fef3c7;
           color: #92400e;
         }
+        .form-group {
+          margin-bottom: 15px;
+        }
+        label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: bold;
+        }
+        input {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          font-size: 16px;
+          box-sizing: border-box;
+        }
+        .tabs {
+          display: flex;
+          margin-bottom: 20px;
+        }
+        .tab {
+          flex: 1;
+          text-align: center;
+          padding: 10px;
+          background: #e2e8f0;
+          cursor: pointer;
+        }
+        .tab.active {
+          background: #5a67d8;
+          color: white;
+        }
+        .tab-content {
+          display: none;
+        }
+        .tab-content.active {
+          display: block;
+        }
       </style>
     </head>
     <body>
@@ -117,26 +156,82 @@ app.get('/', (req, res) => {
         </header>
         
         <div class="screen">
-          <h2>Dashboard</h2>
-          <p>Welcome back, User!</p>
-          
-          <a href="/send-money" class="button">Send Money</a>
-          <a href="#" class="button" style="background: #4c51bf;">Add Beneficiary</a>
-          
-          <h3>Recent Transactions</h3>
-          
-          <div class="recipient-card">
-            <p><strong>To:</strong> John Doe (Nigeria)</p>
-            <p><strong>Amount:</strong> 100.00 CAD → 38,500.00 NGN</p>
-            <p><strong>Date:</strong> April 16, 2025</p>
-            <div class="status status-success">Completed</div>
+          <div class="tabs">
+            <div class="tab active" id="dashboard-tab">Dashboard</div>
+            <div class="tab" id="login-tab">Login</div>
+            <div class="tab" id="register-tab">Register</div>
           </div>
           
-          <div class="recipient-card">
-            <p><strong>To:</strong> Jane Smith (Kenya)</p>
-            <p><strong>Amount:</strong> 200.00 CAD → 22,800.00 KES</p>
-            <p><strong>Date:</strong> April 15, 2025</p>
-            <div class="status status-pending">Pending</div>
+          <div class="tab-content active" id="dashboard-content">
+            <h2>Dashboard</h2>
+            <p>Welcome back, User!</p>
+            
+            <a href="/send-money" class="button">Send Money</a>
+            <a href="#" class="button" style="background: #4c51bf;">Add Beneficiary</a>
+            
+            <h3>Recent Transactions</h3>
+            
+            <div class="recipient-card">
+              <p><strong>To:</strong> John Doe (Nigeria)</p>
+              <p><strong>Amount:</strong> 100.00 CAD → 38,500.00 NGN</p>
+              <p><strong>Date:</strong> April 16, 2025</p>
+              <div class="status status-success">Completed</div>
+            </div>
+            
+            <div class="recipient-card">
+              <p><strong>To:</strong> Jane Smith (Kenya)</p>
+              <p><strong>Amount:</strong> 200.00 CAD → 22,800.00 KES</p>
+              <p><strong>Date:</strong> April 15, 2025</p>
+              <div class="status status-pending">Pending</div>
+            </div>
+          </div>
+          
+          <div class="tab-content" id="login-content">
+            <h2>Login</h2>
+            <form id="login-form">
+              <div class="form-group">
+                <label for="login-email">Email</label>
+                <input type="email" id="login-email" required>
+              </div>
+              <div class="form-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" required>
+              </div>
+              <button type="submit" class="button">Login</button>
+            </form>
+            <div id="login-result"></div>
+          </div>
+          
+          <div class="tab-content" id="register-content">
+            <h2>Register</h2>
+            <form id="register-form">
+              <div class="form-group">
+                <label for="first-name">First Name</label>
+                <input type="text" id="first-name" required>
+              </div>
+              <div class="form-group">
+                <label for="last-name">Last Name</label>
+                <input type="text" id="last-name" required>
+              </div>
+              <div class="form-group">
+                <label for="register-email">Email</label>
+                <input type="email" id="register-email" required>
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" required>
+              </div>
+              <div class="form-group">
+                <label for="register-password">Password</label>
+                <input type="password" id="register-password" required>
+              </div>
+              <div class="form-group">
+                <label for="confirm-password">Confirm Password</label>
+                <input type="password" id="confirm-password" required>
+              </div>
+              <button type="submit" class="button">Register</button>
+            </form>
+            <div id="register-result"></div>
           </div>
         </div>
         
@@ -165,18 +260,138 @@ app.get('/', (req, res) => {
       </div>
       
       <script>
-        // Simulate connection to API server
-        fetch('http://localhost:5001/api/user')
-          .then(response => {
-            if (response.ok) {
-              console.log('Successfully connected to backend API');
-            } else {
-              console.log('Backend API connection unsuccessful: ' + response.status);
+        // Tab functionality
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+          tab.addEventListener('click', () => {
+            // Remove active class from all tabs and contents
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            tab.classList.add('active');
+            
+            // Determine which content to display
+            if (tab.id === 'dashboard-tab') {
+              document.getElementById('dashboard-content').classList.add('active');
+            } else if (tab.id === 'login-tab') {
+              document.getElementById('login-content').classList.add('active');
+            } else if (tab.id === 'register-tab') {
+              document.getElementById('register-content').classList.add('active');
             }
+          });
+        });
+        
+        // Register form submission
+        const registerForm = document.getElementById('register-form');
+        registerForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const firstName = document.getElementById('first-name').value;
+          const lastName = document.getElementById('last-name').value;
+          const email = document.getElementById('register-email').value;
+          const phoneNumber = document.getElementById('phone').value;
+          const password = document.getElementById('register-password').value;
+          const confirmPassword = document.getElementById('confirm-password').value;
+          
+          // Validate passwords match
+          if (password !== confirmPassword) {
+            document.getElementById('register-result').innerHTML = '<p style="color: red;">Passwords do not match</p>';
+            return;
+          }
+          
+          // Submit registration request
+          fetch('http://localhost:5001/api/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              firstName,
+              lastName,
+              email,
+              phoneNumber,
+              password
+            }),
+            credentials: 'include'
+          })
+          .then(response => {
+            console.log('Register response status:', response.status);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Registration successful:', data);
+            document.getElementById('register-result').innerHTML = '<p style="color: green;">Registration successful!</p>';
+            // Auto-switch to dashboard
+            document.getElementById('dashboard-tab').click();
           })
           .catch(error => {
-            console.error('Error connecting to backend API:', error);
+            console.error('Registration error:', error);
+            document.getElementById('register-result').innerHTML = '<p style="color: red;">Registration failed: ' + error.message + '</p>';
           });
+        });
+        
+        // Login form submission
+        const loginForm = document.getElementById('login-form');
+        loginForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const email = document.getElementById('login-email').value;
+          const password = document.getElementById('login-password').value;
+          
+          // Submit login request
+          fetch('http://localhost:5001/api/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              email,
+              password
+            }),
+            credentials: 'include'
+          })
+          .then(response => {
+            console.log('Login response status:', response.status);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Login successful:', data);
+            document.getElementById('login-result').innerHTML = '<p style="color: green;">Login successful!</p>';
+            // Auto-switch to dashboard
+            document.getElementById('dashboard-tab').click();
+          })
+          .catch(error => {
+            console.error('Login error:', error);
+            document.getElementById('login-result').innerHTML = '<p style="color: red;">Login failed: ' + error.message + '</p>';
+          });
+        });
+        
+        // Check if user is already logged in
+        fetch('http://localhost:5001/api/user', {
+          credentials: 'include'
+        })
+        .then(response => {
+          if (response.ok) {
+            console.log('User already logged in');
+            return response.json();
+          } else {
+            console.log('User not logged in');
+            throw new Error('Not logged in');
+          }
+        })
+        .then(user => {
+          console.log('User data:', user);
+          // Auto-switch to dashboard if logged in
+          document.getElementById('dashboard-tab').click();
+        })
+        .catch(error => {
+          console.error('Error checking login status:', error);
+          // Auto-switch to login tab if not logged in
+          document.getElementById('login-tab').click();
+        });
       </script>
     </body>
     </html>`;
