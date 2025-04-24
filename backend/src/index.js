@@ -1,17 +1,17 @@
-const express = require('express');
-const cors = require('cors');
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const crypto = require('crypto');
-const { promisify } = require('util');
-const dotenv = require('dotenv');
-const { storage } = require('./storage');
-const { testConnection } = require('./db');
-const { initializeTables } = require('./schema');
+import express, { json, urlencoded } from 'express';
+import cors from 'cors';
+import session from 'express-session';
+import { initialize, session as _session, use, serializeUser, deserializeUser, authenticate } from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
+import { scrypt, randomBytes, timingSafeEqual } from 'crypto';
+import { promisify } from 'util';
+import { config } from 'dotenv';
+import { storage } from './storage';
+import { testConnection } from './db';
+import { initializeTables } from './schema';
 
 // Load environment variables
-dotenv.config();
+config();
 
 // Initialize Express app
 const app = express();
@@ -22,8 +22,8 @@ app.use(cors({
   origin: true, // Allow any origin in development (customize in production)
   credentials: true // Allow cookies to be sent
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(json());
+app.use(urlencoded({ extended: true }));
 
 // Session configuration
 app.use(session({
@@ -39,14 +39,14 @@ app.use(session({
 }));
 
 // Passport authentication setup
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(initialize());
+app.use(_session());
 
 // Password hashing utilities
-const scryptAsync = promisify(crypto.scrypt);
+const scryptAsync = promisify(scrypt);
 
 async function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
+  const salt = randomBytes(16).toString('hex');
   const buf = await scryptAsync(password, salt, 64);
   return `${buf.toString('hex')}.${salt}`;
 }
@@ -62,7 +62,7 @@ async function comparePasswords(supplied, stored) {
     const [hashed, salt] = stored.split('.');
     const hashedBuf = Buffer.from(hashed, 'hex');
     const suppliedBuf = await scryptAsync(supplied, salt, 64);
-    return crypto.timingSafeEqual(hashedBuf, suppliedBuf);
+    return timingSafeEqual(hashedBuf, suppliedBuf);
   } catch (error) {
     console.error('Password comparison error:', error);
     return false;
@@ -70,7 +70,7 @@ async function comparePasswords(supplied, stored) {
 }
 
 // Passport local strategy
-passport.use(new LocalStrategy(
+use(new LocalStrategy(
   { usernameField: 'email' },
   async (email, password, done) => {
     try {
@@ -85,8 +85,8 @@ passport.use(new LocalStrategy(
   }
 ));
 
-passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser(async (id, done) => {
+serializeUser((user, done) => done(null, user.id));
+deserializeUser(async (id, done) => {
   try {
     const user = await storage.getUser(id);
     done(null, user);
@@ -152,7 +152,7 @@ app.post('/api/register', async (req, res, next) => {
 });
 
 app.post('/api/login', (req, res, next) => {
-  passport.authenticate('local', (err, user, info) => {
+  authenticate('local', (err, user, info) => {
     if (err) return next(err);
     if (!user) {
       return res.status(401).json({ message: info?.message || 'Invalid email or password' });
@@ -195,7 +195,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     }
     
     // Generate reset token
-    const token = crypto.randomBytes(20).toString('hex');
+    const token = randomBytes(20).toString('hex');
     await storage.storeResetToken(user.id, token);
     
     // In a real app, send email with reset link
