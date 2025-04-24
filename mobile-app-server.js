@@ -397,6 +397,7 @@ app.get('/send-money', (req, res) => {
             const analysisCard = document.getElementById('transactionAnalysis');
             
             // Settings for API request
+            // Use localhost for direct API access
             const apiUrl = 'http://localhost:5001/api/analyze-transaction';
             console.log('Using API URL:', apiUrl);
             
@@ -413,10 +414,8 @@ app.get('/send-money', (req, res) => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
+                    'Accept': 'application/json'
                 },
-                mode: 'cors',
                 body: JSON.stringify(requestData)
             })
             .then(response => {
