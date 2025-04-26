@@ -1,0 +1,40 @@
+npm install
+npm error code ERESOLVE
+npm error ERESOLVE could not resolve
+npm error
+npm error While resolving: workspace@1.0.0
+npm error Found: expo-router@4.0.19
+npm error node_modules/expo-router
+npm error   expo-router@"^2.0.0" from the root project
+npm error
+npm error Could not resolve dependency:
+npm error expo-router@"^2.0.0" from the root project
+npm error
+npm error Conflicting peer dependency: @react-navigation/native@6.1.18
+npm error node_modules/@react-navigation/native
+npm error   peer @react-navigation/native@"^6.0.0" from @react-navigation/drawer@6.7.2
+npm error   node_modules/@react-navigation/drawer
+npm error     peerOptional @react-navigation/drawer@"^6.5.8" from expo-router@2.0.15
+npm error     node_modules/expo-router
+npm error       expo-router@"^2.0.0" from the root project
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error /home/runner/.npm/_logs/2025-04-24T05_51_56_829Z-eresolve-report.txt
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-04-24T05_51_56_829Z-debug-0.log
+Error: npm exited with non-zero code: 1
+Error: npm exited with non-zero code: 1
+    at ChildProcess.completionListener (/home/runner/workspace/node_modules/@expo/spawn-async/build/spawnAsync.js:52:23)
+    at Object.onceWrapper (node:events:633:26)
+    at ChildProcess.emit (node:events:518:28)
+    at maybeClose (node:internal/child_process:1104:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:304:5)
+    ...
+    at spawnAsync (/home/runner/workspace/node_modules/@expo/spawn-async/build/spawnAsync.js:17:21)
+    at NpmPackageManager.runAsync (/home/runner/workspace/node_modules/@expo/package-manager/build/node/BasePackageManager.js:38:42)
+    at /home/runner/workspace/node_modules/@expo/package-manager/build/node/NpmPackageManager.js:38:20
+    at /home/runner/workspace/node_modules/@expo/package-manager/build/utils/spawn.js:19:34

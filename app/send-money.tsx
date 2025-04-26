@@ -12,13 +12,13 @@ import CurrencyConverter from '../components/send/CurrencyConverter';
 import BeneficiarySelector from '../components/send/BeneficiarySelector';
 import FeeCalculator from '../components/send/FeeCalculator';
 import PaymentMethod from '../components/send/PaymentMethod';
+import TransactionAnalysis from '../components/send/TransactionAnalysis';
 import ErrorMessage from '../components/ui/ErrorMessage';
 import theme from '../constants/theme';
 import { sendMoneySchema } from '../utils/validation';
 import { Country, getCountryByCode } from '../constants/countries';
 import { sourceCountry } from '../constants/countries';
-import { TransactionQuote } from '../services/transaction';
-import transactionService from '../services/transaction';
+import transactionService, { Quote } from '../services/transaction';
 import beneficiaryService, { Beneficiary } from '../services/beneficiary';
 
 export default function SendMoney() {
@@ -29,7 +29,7 @@ export default function SendMoney() {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
-  const [transactionQuote, setTransactionQuote] = useState<TransactionQuote | null>(null);
+  const [transactionQuote, setTransactionQuote] = useState<Quote | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,11 +67,11 @@ export default function SendMoney() {
   const handleGetQuote = async (amount: number, destinationCurrency: string) => {
     try {
       setError(null);
-      const quote = await transactionService.getTransactionQuote(
-        amount,
-        sourceCountry.currencyCode,
-        destinationCurrency
-      );
+      const quote = await transactionService.createQuote({
+        sourceAmount: amount,
+        sourceCurrency: sourceCountry.currencyCode,
+        destinationCurrency: destinationCurrency
+      });
       setTransactionQuote(quote);
       return quote;
     } catch (error) {
@@ -86,11 +86,18 @@ export default function SendMoney() {
       setIsSubmitting(true);
       setError(null);
 
-      // Create transaction
-      const transaction = await transactionService.createTransaction({
-        amount: values.amount,
-        beneficiaryId: values.beneficiary,
+      // First, create a new quote
+      const quote = await transactionService.createQuote({
+        sourceAmount: parseFloat(values.amount),
+        sourceCurrency: sourceCountry.currencyCode,
         destinationCurrency: selectedCountry?.currencyCode || '',
+        beneficiaryId: values.beneficiary
+      });
+
+      // Create transaction with the quote ID
+      const transaction = await transactionService.createTransaction({
+        quoteId: quote.id,
+        beneficiaryId: values.beneficiary,
         paymentMethod: values.paymentMethod,
         note: values.note,
       });
@@ -213,7 +220,17 @@ export default function SendMoney() {
                   />
                   
                   {transactionQuote && (
-                    <FeeCalculator quote={transactionQuote} />
+                    <>
+                      <FeeCalculator quote={transactionQuote} />
+                      {selectedCountry && (
+                        <TransactionAnalysis
+                          amount={parseFloat(values.amount) || 0}
+                          sourceCurrency={sourceCountry.currencyCode}
+                          destinationCurrency={selectedCountry.currencyCode}
+                          destinationCountry={selectedCountry.code}
+                        />
+                      )}
+                    </>
                   )}
                   
                   <View style={styles.buttonContainer}>

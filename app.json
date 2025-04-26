@@ -15,7 +15,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.afrikasend.sendafrika"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,12 +24,8 @@
         "backgroundColor": "#ffffff"
       }
     },
-    "web": {
-      "favicon": "./generated-icon.png"
-    },
     "plugins": [
       "expo-router"
-    ],
-    "scheme": "sendafrika"
+    ]
   }
 }

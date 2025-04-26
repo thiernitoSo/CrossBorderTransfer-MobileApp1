@@ -25,15 +25,20 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({ message, onDismiss }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: theme.colors.error + '15', // 15% opacity
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.error,
+    backgroundColor: theme.colors.error + '10', // 10% opacity
+    borderWidth: 1,
+    borderColor: theme.colors.error + '30', // 30% opacity
     flexDirection: 'row',
     marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.md,
-    borderRadius: theme.roundness.small,
-    padding: theme.spacing.md,
+    borderRadius: theme.roundness.medium,
+    padding: theme.spacing.lg,
     alignItems: 'center',
+    shadowColor: theme.colors.error,
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
   },
   contentContainer: {
     flex: 1,

@@ -39,6 +39,10 @@ args = "MobileApp"
 task = "workflow.run"
 args = "SendAfrikaBackend"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "MobileAppSimulator"
+
 [[workflows.workflow]]
 name = "MobileApp"
 author = "agent"
@@ -51,7 +55,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npx expo start --web --port 5000"
+args = "npx expo start --port 5000"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -69,8 +73,23 @@ task = "shell.exec"
 args = "./run-sendafrika.sh"
 waitForPort = 5001
 
+[[workflows.workflow]]
+name = "MobileAppSimulator"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node mobile-app-server.js"
+waitForPort = 5002
+
 [deployment]
-run = ["sh", "-c", "npx expo start --web --port 5000"]
+run = ["sh", "-c", "npx expo start --port 5000"]
 
 [[ports]]
 localPort = 5000
@@ -79,6 +98,10 @@ externalPort = 80
 [[ports]]
 localPort = 5001
 externalPort = 3000
+
+[[ports]]
+localPort = 5002
+externalPort = 3001
 
 [[ports]]
 localPort = 8000

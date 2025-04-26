@@ -1,17 +1,18 @@
+//import express, { json, urlencoded } from 'express';
 const express = require('express');
-const cors = require('cors');
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const crypto = require('crypto');
-const { promisify } = require('util');
-const dotenv = require('dotenv');
-const { storage } = require('./storage');
-const { testConnection } = require('./db');
-const { initializeTables } = require('./schema');
+import cors from 'cors';
+import session from 'express-session';
+import { initialize, session as _session, use, serializeUser, deserializeUser, authenticate } from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
+import { scrypt, randomBytes, timingSafeEqual } from 'crypto';
+import { promisify } from 'util';
+import { config } from 'dotenv';
+import { storage } from './storage';
+import { testConnection } from './db';
+import { initializeTables } from './schema';
 
 // Load environment variables
-dotenv.config();
+config();
 
 // Initialize Express app
 const app = express();
@@ -22,8 +23,8 @@ app.use(cors({
   origin: true, // Allow any origin in development (customize in production)
   credentials: true // Allow cookies to be sent
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(json());
+app.use(urlencoded({ extended: true }));
 
 // Session configuration
 app.use(session({
@@ -39,14 +40,14 @@ app.use(session({
 }));
 
 // Passport authentication setup
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(initialize());
+app.use(_session());
 
 // Password hashing utilities
-const scryptAsync = promisify(crypto.scrypt);
+const scryptAsync = promisify(scrypt);
 
 async function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
+  const salt = randomBytes(16).toString('hex');
   const buf = await scryptAsync(password, salt, 64);
   return `${buf.toString('hex')}.${salt}`;
 }
@@ -56,13 +57,13 @@ async function comparePasswords(supplied, stored) {
   if (!stored.includes('.')) {
     return supplied === stored;
   }
-  
+
   try {
     // Regular scrypt comparison for production
     const [hashed, salt] = stored.split('.');
     const hashedBuf = Buffer.from(hashed, 'hex');
     const suppliedBuf = await scryptAsync(supplied, salt, 64);
-    return crypto.timingSafeEqual(hashedBuf, suppliedBuf);
+    return timingSafeEqual(hashedBuf, suppliedBuf);
   } catch (error) {
     console.error('Password comparison error:', error);
     return false;
@@ -70,7 +71,7 @@ async function comparePasswords(supplied, stored) {
 }
 
 // Passport local strategy
-passport.use(new LocalStrategy(
+use(new LocalStrategy(
   { usernameField: 'email' },
   async (email, password, done) => {
     try {
@@ -85,8 +86,8 @@ passport.use(new LocalStrategy(
   }
 ));
 
-passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser(async (id, done) => {
+serializeUser((user, done) => done(null, user.id));
+deserializeUser(async (id, done) => {
   try {
     const user = await storage.getUser(id);
     done(null, user);
@@ -103,17 +104,29 @@ function isAuthenticated(req, res, next) {
   res.status(401).json({ message: 'Unauthorized. Please log in.' });
 }
 
-function isAdmin(req, res, next) {
+// Admin middleware for protected routes
+export function isAdmin(req, res, next) {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: 'Authentication required' });
   }
-  
+
   if (req.user.role !== 'admin') {
     return res.status(403).json({ message: 'Admin access required' });
   }
-  
+
   next();
 }
+
+// Admin routes
+app.get('/api/admin/stats', isAdmin, async (req, res) => {
+  try {
+    const stats = await storage.getAdminStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Admin stats error:', error);
+    res.status(500).json({ message: 'Failed to get admin statistics' });
+  }
+});
 
 // Auth routes
 app.post('/api/register', async (req, res, next) => {
@@ -152,7 +165,7 @@ app.post('/api/register', async (req, res, next) => {
 });
 
 app.post('/api/login', (req, res, next) => {
-  passport.authenticate('local', (err, user, info) => {
+  authenticate('local', (err, user, info) => {
     if (err) return next(err);
     if (!user) {
       return res.status(401).json({ message: info?.message || 'Invalid email or password' });
@@ -160,7 +173,7 @@ app.post('/api/login', (req, res, next) => {
 
     req.login(user, (loginErr) => {
       if (loginErr) return next(loginErr);
-      
+
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -186,21 +199,21 @@ app.get('/api/user', (req, res) => {
 app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-    
+
     // Check if user exists
     const user = await storage.getUserByEmail(email);
     if (!user) {
       // For security reasons, don't reveal that the email doesn't exist
       return res.status(200).json({ message: 'If an account with that email exists, a password reset link has been sent.' });
     }
-    
+
     // Generate reset token
-    const token = crypto.randomBytes(20).toString('hex');
+    const token = randomBytes(20).toString('hex');
     await storage.storeResetToken(user.id, token);
-    
+
     // In a real app, send email with reset link
     console.log(`Reset token for ${email}: ${token}`);
-    
+
     res.status(200).json({ message: 'If an account with that email exists, a password reset link has been sent.' });
   } catch (error) {
     console.error('Password reset request error:', error);
@@ -211,20 +224,20 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
     const { token, password } = req.body;
-    
+
     // Verify token
     const userId = await storage.getUserIdByResetToken(token);
     if (!userId) {
       return res.status(400).json({ message: 'Invalid or expired reset token' });
     }
-    
+
     // Update password
     const hashedPassword = await hashPassword(password);
     await storage.updateUser(userId, { password: hashedPassword });
-    
+
     // Remove the used token
     await storage.deleteResetToken(token);
-    
+
     res.status(200).json({ message: 'Password has been reset successfully' });
   } catch (error) {
     console.error('Password reset error:', error);
@@ -236,17 +249,17 @@ app.post('/api/auth/change-password', isAuthenticated, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user.id;
-    
+
     // Verify current password
     const user = await storage.getUser(userId);
     if (!user || !(await comparePasswords(currentPassword, user.password))) {
       return res.status(400).json({ message: 'Current password is incorrect' });
     }
-    
+
     // Update password
     const hashedPassword = await hashPassword(newPassword);
     await storage.updateUser(userId, { password: hashedPassword });
-    
+
     res.status(200).json({ message: 'Password has been changed successfully' });
   } catch (error) {
     console.error('Change password error:', error);
@@ -268,15 +281,15 @@ app.get('/api/beneficiaries', isAuthenticated, async (req, res) => {
 app.get('/api/beneficiaries/:id', isAuthenticated, async (req, res) => {
   try {
     const beneficiary = await storage.getBeneficiary(req.params.id);
-    
+
     if (!beneficiary) {
       return res.status(404).json({ message: 'Beneficiary not found' });
     }
-    
+
     if (beneficiary.userId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to access this beneficiary' });
     }
-    
+
     res.json(beneficiary);
   } catch (error) {
     console.error('Get beneficiary error:', error);
@@ -290,7 +303,7 @@ app.post('/api/beneficiaries', isAuthenticated, async (req, res) => {
       ...req.body,
       userId: req.user.id
     });
-    
+
     res.status(201).json(newBeneficiary);
   } catch (error) {
     console.error('Create beneficiary error:', error);
@@ -301,15 +314,15 @@ app.post('/api/beneficiaries', isAuthenticated, async (req, res) => {
 app.put('/api/beneficiaries/:id', isAuthenticated, async (req, res) => {
   try {
     const beneficiary = await storage.getBeneficiary(req.params.id);
-    
+
     if (!beneficiary) {
       return res.status(404).json({ message: 'Beneficiary not found' });
     }
-    
+
     if (beneficiary.userId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to update this beneficiary' });
     }
-    
+
     const updatedBeneficiary = await storage.updateBeneficiary(req.params.id, req.body);
     res.json(updatedBeneficiary);
   } catch (error) {
@@ -321,15 +334,15 @@ app.put('/api/beneficiaries/:id', isAuthenticated, async (req, res) => {
 app.delete('/api/beneficiaries/:id', isAuthenticated, async (req, res) => {
   try {
     const beneficiary = await storage.getBeneficiary(req.params.id);
-    
+
     if (!beneficiary) {
       return res.status(404).json({ message: 'Beneficiary not found' });
     }
-    
+
     if (beneficiary.userId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to delete this beneficiary' });
     }
-    
+
     await storage.deleteBeneficiary(req.params.id);
     res.sendStatus(204);
   } catch (error) {
@@ -356,10 +369,10 @@ app.get('/api/transactions', isAuthenticated, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    
+
     const transactions = await storage.getTransactionsByUserId(req.user.id, page, limit);
     const total = await storage.countTransactionsByUserId(req.user.id);
-    
+
     res.json({
       transactions,
       pagination: {
@@ -378,15 +391,15 @@ app.get('/api/transactions', isAuthenticated, async (req, res) => {
 app.get('/api/transactions/:id', isAuthenticated, async (req, res) => {
   try {
     const transaction = await storage.getTransaction(req.params.id);
-    
+
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
     }
-    
+
     if (transaction.userId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to access this transaction' });
     }
-    
+
     res.json(transaction);
   } catch (error) {
     console.error('Get transaction error:', error);
@@ -397,23 +410,23 @@ app.get('/api/transactions/:id', isAuthenticated, async (req, res) => {
 app.post('/api/transactions/quote', async (req, res) => {
   try {
     const { amount, sourceCurrency = 'CAD', destinationCurrency } = req.body;
-    
+
     if (!amount || !destinationCurrency) {
       return res.status(400).json({ message: 'Amount and destination currency are required' });
     }
-    
+
     // Get exchange rate
     const exchangeRate = exchangeRates[sourceCurrency]?.[destinationCurrency] || 0;
     if (!exchangeRate) {
       return res.status(400).json({ message: 'Unsupported currency pair' });
     }
-    
+
     // Calculate fee (simplified fee structure)
     const fee = amount * 0.05; // 5% fee
-    
+
     // Calculate destination amount
     const destinationAmount = (amount - fee) * exchangeRate;
-    
+
     res.json({
       sourceAmount: amount,
       sourceCurrency,
@@ -433,34 +446,34 @@ app.post('/api/transactions/quote', async (req, res) => {
 app.post('/api/transactions', isAuthenticated, async (req, res) => {
   try {
     const { amount, beneficiaryId, destinationCurrency, paymentMethod, note } = req.body;
-    
+
     if (!amount || !beneficiaryId || !destinationCurrency || !paymentMethod) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
-    
+
     // Get beneficiary
     const beneficiary = await storage.getBeneficiary(beneficiaryId);
     if (!beneficiary) {
       return res.status(404).json({ message: 'Beneficiary not found' });
     }
-    
+
     if (beneficiary.userId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to use this beneficiary' });
     }
-    
+
     // Get exchange rate
     const sourceCurrency = 'CAD'; // Hardcoded for now
     const exchangeRate = exchangeRates[sourceCurrency]?.[destinationCurrency] || 0;
     if (!exchangeRate) {
       return res.status(400).json({ message: 'Unsupported currency pair' });
     }
-    
+
     // Calculate fee
     const fee = amount * 0.05; // 5% fee
-    
+
     // Calculate destination amount
     const destinationAmount = (amount - fee) * exchangeRate;
-    
+
     // Create transaction
     const transaction = await storage.createTransaction({
       userId: req.user.id,
@@ -476,7 +489,7 @@ app.post('/api/transactions', isAuthenticated, async (req, res) => {
       paymentMethod,
       note
     });
-    
+
     res.status(201).json(transaction);
   } catch (error) {
     console.error('Create transaction error:', error);
@@ -487,19 +500,19 @@ app.post('/api/transactions', isAuthenticated, async (req, res) => {
 app.post('/api/transactions/:id/cancel', isAuthenticated, async (req, res) => {
   try {
     const transaction = await storage.getTransaction(req.params.id);
-    
+
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
     }
-    
+
     if (transaction.userId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to cancel this transaction' });
     }
-    
+
     if (transaction.status !== 'pending') {
       return res.status(400).json({ message: 'Only pending transactions can be cancelled' });
     }
-    
+
     const updatedTransaction = await storage.updateTransaction(req.params.id, { status: 'cancelled' });
     res.json(updatedTransaction);
   } catch (error) {
@@ -533,14 +546,14 @@ async function startServer() {
       console.error('Failed to connect to PostgreSQL database. Exiting...');
       process.exit(1);
     }
-    
+
     // Initialize database tables
     const tablesCreated = await initializeTables();
     if (!tablesCreated) {
       console.error('Failed to create database tables. Exiting...');
       process.exit(1);
     }
-    
+
     // Start the server
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on http://0.0.0.0:${PORT}`);
